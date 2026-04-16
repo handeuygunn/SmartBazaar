@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>SmartBazaar</title>
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:ital,wght@0,700;1,700&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --cream: #F5EFE6;
+    --cream-dark: #EDE4D8;
+    --brown-dark: #2C1A0E;
+    --brown-mid: #5C3D2E;
+    --terra: #C0431C;
+    --terra-hover: #A33517;
+    --terra-light: #F5E8E3;
+    --accent-gold: #D4A44C;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'DM Sans', sans-serif;
+    background: var(--cream);
+    color: var(--brown-dark);
+    overflow-x: hidden;
+  }
+
+  /* NAV */
+  nav {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.2rem 4rem;
+    background: var(--cream);
+    border-bottom: 1px solid rgba(92,61,46,0.15);
+    position: sticky;
+    top: 0;
+    z-index: 100;
+  }
+  .logo {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.6rem;
+    color: var(--brown-dark);
+    letter-spacing: -0.5px;
+  }
+  .logo span { color: var(--terra); }
+  .nav-links { display: flex; gap: 2.5rem; align-items: center; }
+  .nav-links a {
+    text-decoration: none;
+    color: var(--brown-mid);
+    font-size: 0.92rem;
+    font-weight: 400;
+    transition: color 0.2s;
+  }
+  .nav-links a:hover { color: var(--terra); }
+  .nav-right { display: flex; gap: 1.2rem; align-items: center; }
+  .btn-primary {
+    background: var(--terra);
+    color: #fff;
+    border: none;
+    padding: 0.6rem 1.4rem;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: background 0.2s;
+  }
+  .btn-primary:hover { background: var(--terra-hover); }
+  .btn-outline {
+    background: transparent;
+    color: var(--brown-dark);
+    border: 1.5px solid var(--brown-dark);
+    padding: 0.55rem 1.3rem;
+    border-radius: 50px;
+    font-family: 'DM Sans', sans-serif;
+    font-size: 0.88rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .btn-outline:hover { background: var(--brown-dark); color: #fff; }
+  .cart-icon {
+    font-size: 1.2rem;
+    cursor: pointer;
+    position: relative;
+    color: var(--brown-dark);
+  }
+  .cart-badge {
+    position: absolute;
+    top: -6px; right: -8px;
+    background: var(--terra);
+    color: #fff;
+    font-size: 0.65rem;
+    width: 16px; height: 16px;
+    border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-weight: 600;
+  }
+
+  /* HERO */
+  .hero {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    padding: 5rem 4rem 4rem;
+    min-height: 88vh;
+    align-items: center;
+  }
+  .hero-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    border: 1px solid rgba(92,61,46,0.3);
+    padding: 0.4rem 1rem;
+    border-radius: 50px;
+    font-size: 0.78rem;
+    font-weight: 500;
+    color: var(--brown-mid);
+    margin-bottom: 1.8rem;
+    letter-spacing: 0.5px;
+  }
+  .hero-badge::before {
+    content: '✦';
+    color: var(--terra);
+    font-size: 0.7rem;
+  }
+  .hero h1 {
+    font-family: 'Playfair Display', serif;
+    font-size: 4.2rem;
+    line-height: 1.1;
+    margin-bottom: 1.5rem;
+    color: var(--brown-dark);
+  }
+  .hero h1 em {
+    font-style: italic;
+    color: var(--terra);
+  }
+  .hero-desc {
+    font-size: 1rem;
+    line-height: 1.7;
+    color: var(--brown-mid);
+    max-width: 440px;
+    margin-bottom: 2.5rem;
+  }
+  .hero-actions { display: flex; gap: 1rem; flex-wrap: wrap; }
+  .hero-stats {
+    display: flex;
+    gap: 2.5rem;
+    margin-top: 3.5rem;
+    padding-top: 2rem;
+    border-top: 1px solid rgba(92,61,46,0.15);
+  }
+  .stat-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.7rem;
+    color: var(--terra);
+    font-weight: 700;
+  }
+  .stat-label { font-size: 0.82rem; color: var(--brown-mid); margin-top: 2px; }
+
+  /* HERO VISUAL */
+  .hero-visual {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .hero-circle {
+    width: 440px;
+    height: 440px;
+    border-radius: 50%;
+    background: var(--cream-dark);
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: visible;
+  }
+  .floating-card {
+    position: absolute;
+    background: #fff;
+    border-radius: 12px;
+    padding: 0.7rem 1.1rem;
+    font-size: 0.82rem;
+    font-weight: 500;
+    color: var(--brown-dark);
+    box-shadow: 0 4px 20px rgba(44,26,14,0.12);
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    white-space: nowrap;
+  }
+  .floating-card.top-right { top: 30px; right: -30px; }
+  .floating-card.bottom-left { bottom: 60px; left: -40px; }
+  .floating-card .dot {
+    width: 8px; height: 8px;
+    border-radius: 50%;
+    background: var(--terra);
+  }
+  .hero-product-box {
+    background: #fff;
+    border-radius: 20px;
+    width: 220px;
+    height: 280px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-end;
+    padding: 1.5rem;
+    position: relative;
+    overflow: hidden;
+  }
+  .product-img-placeholder {
+    width: 130px;
+    height: 130px;
+    background: var(--terra-light);
+    border-radius: 50%;
+    position: absolute;
+    top: 30px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+  }
+  .product-label {
+    font-family: 'Playfair Display', serif;
+    font-size: 1rem;
+    color: var(--brown-dark);
+    text-align: center;
+    margin-top: 90px;
+  }
+  .product-price {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--terra);
+    margin-top: 4px;
+  }
+  .add-btn {
+    margin-top: 12px;
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--terra);
+    color: #fff;
+    border: none;
+    font-size: 1.3rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* CATEGORIES */
+  .categories {
+    padding: 5rem 4rem;
+    background: #fff;
+  }
+  .section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 2.5rem;
+  }
+  .section-title {
+    font-family: 'Playfair Display', serif;
+    font-size: 2.2rem;
+    color: var(--brown-dark);
+  }
+  .section-title span { color: var(--terra); }
+  .see-all {
+    color: var(--terra);
+    text-decoration: none;
+    font-size: 0.88rem;
+    font-weight: 500;
+    border-bottom: 1px solid var(--terra);
+    padding-bottom: 2px;
+    cursor: pointer;
+  }
+  .cat-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+  }
+  .cat-card {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 2rem 1.5rem;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    cursor: pointer;
+    transition: transform 0.2s, background 0.2s;
+    position: relative;
+    overflow: hidden;
+  }
+  .cat-card:hover { transform: translateY(-4px); }
+  .cat-card.featured { background: var(--terra); color: #fff; }
+  .cat-icon { font-size: 2.2rem; margin-bottom: 1rem; }
+  .cat-name {
+    font-family: 'Playfair Display', serif;
+    font-size: 1.1rem;
+    font-weight: 700;
+    color: var(--brown-dark);
+    margin-bottom: 4px;
+  }
+  .cat-card.featured .cat-name { color: #fff; }
+  .cat-count { font-size: 0.8rem; color: var(--brown-mid); }
+  .cat-card.featured .cat-count { color: rgba(255,255,255,0.8); }
+  .cat-arrow {
+    position: absolute;
+    bottom: 1.5rem;
+    right: 1.5rem;
+    font-size: 1rem;
+    color: var(--brown-mid);
+  }
+  .cat-card.featured .cat-arrow { color: rgba(255,255,255,0.8); }
+
+  /* FEATURED PRODUCTS */
+  .products {
+    padding: 5rem 4rem;
+    background: var(--cream);
+  }
+  .product-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.2rem;
+  }
+  .product-card {
+    background: #fff;
+    border-radius: 16px;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .product-card:hover { transform: translateY(-4px); }
+  .product-img {
+    height: 180px;
+    background: var(--cream-dark);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 3rem;
+    position: relative;
+  }
+  .badge-new {
+    position: absolute;
+    top: 12px; left: 12px;
+    background: var(--terra);
+    color: #fff;
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 50px;
+    letter-spacing: 0.5px;
+  }
+  .badge-sale {
+    position: absolute;
+    top: 12px; left: 12px;
+    background: var(--accent-gold);
+    color: var(--brown-dark);
+    font-size: 0.7rem;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 50px;
+  }
+  .product-body { padding: 1rem 1.2rem 1.2rem; }
+  .product-brand { font-size: 0.75rem; color: var(--brown-mid); text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: 4px; }
+  .product-name { font-family: 'Playfair Display', serif; font-size: 1rem; color: var(--brown-dark); margin-bottom: 0.7rem; }
+  .product-footer { display: flex; justify-content: space-between; align-items: center; }
+  .product-price-big { font-size: 1.1rem; font-weight: 600; color: var(--terra); }
+  .product-old-price { font-size: 0.8rem; color: #aaa; text-decoration: line-through; margin-left: 4px; }
+  .add-to-cart-btn {
+    background: var(--brown-dark);
+    color: #fff;
+    border: none;
+    width: 32px; height: 32px;
+    border-radius: 50%;
+    font-size: 1.1rem;
+    cursor: pointer;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* HOW IT WORKS */
+  .how {
+    padding: 5rem 4rem;
+    background: var(--brown-dark);
+    color: var(--cream);
+  }
+  .how .section-title { color: var(--cream); }
+  .how .section-title span { color: var(--terra); }
+  .how-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 2rem;
+    margin-top: 3rem;
+  }
+  .how-step {
+    text-align: left;
+    padding: 2rem;
+    border: 1px solid rgba(245,239,230,0.15);
+    border-radius: 16px;
+    position: relative;
+  }
+  .step-num {
+    font-family: 'Playfair Display', serif;
+    font-size: 3rem;
+    color: var(--terra);
+    opacity: 0.4;
+    line-height: 1;
+    margin-bottom: 1rem;
+  }
+  .step-icon { font-size: 1.8rem; margin-bottom: 1rem; }
+  .step-title { font-family: 'Playfair Display', serif; font-size: 1.2rem; color: var(--cream); margin-bottom: 0.5rem; }
+  .step-desc { font-size: 0.88rem; color: rgba(245,239,230,0.65); line-height: 1.6; }
+
+  /* BANNER */
+  .banner {
+    padding: 5rem 4rem;
+    background: var(--terra-light);
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 4rem;
+    align-items: center;
+  }
+  .banner-tag {
+    display: inline-block;
+    background: var(--terra);
+    color: #fff;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 1px;
+    padding: 4px 14px;
+    border-radius: 50px;
+    margin-bottom: 1.2rem;
+    text-transform: uppercase;
+  }
+  .banner h2 { font-family: 'Playfair Display', serif; font-size: 2.5rem; color: var(--brown-dark); margin-bottom: 1rem; }
+  .banner p { font-size: 0.95rem; color: var(--brown-mid); line-height: 1.7; margin-bottom: 2rem; }
+  .banner-visual {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+  }
+  .bv-card {
+    background: #fff;
+    border-radius: 14px;
+    padding: 1.5rem;
+    text-align: center;
+    font-size: 2rem;
+  }
+  .bv-card:last-child { background: var(--terra); }
+  .bv-label { font-size: 0.78rem; color: var(--brown-mid); margin-top: 8px; font-weight: 500; }
+
+  /* TESTIMONIALS */
+  .testimonials {
+    padding: 5rem 4rem;
+    background: #fff;
+  }
+  .testi-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+    margin-top: 3rem;
+  }
+  .testi-card {
+    background: var(--cream);
+    border-radius: 16px;
+    padding: 1.8rem;
+  }
+  .testi-stars { color: var(--accent-gold); margin-bottom: 1rem; font-size: 0.9rem; }
+  .testi-text { font-size: 0.9rem; color: var(--brown-mid); line-height: 1.7; margin-bottom: 1.2rem; font-style: italic; }
+  .testi-user { display: flex; align-items: center; gap: 0.8rem; }
+  .avatar {
+    width: 40px; height: 40px;
+    border-radius: 50%;
+    background: var(--terra-light);
+    display: flex; align-items: center; justify-content: center;
+    font-size: 0.85rem;
+    font-weight: 600;
+    color: var(--terra);
+  }
+  .user-name { font-size: 0.88rem; font-weight: 500; color: var(--brown-dark); }
+  .user-role { font-size: 0.75rem; color: var(--brown-mid); }
+
+  /* FOOTER */
+  footer {
+    background: var(--brown-dark);
+    color: rgba(245,239,230,0.7);
+    padding: 4rem 4rem 2rem;
+  }
+  .footer-grid {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr 1fr;
+    gap: 3rem;
+    margin-bottom: 3rem;
+    padding-bottom: 3rem;
+    border-bottom: 1px solid rgba(245,239,230,0.12);
+  }
+  .footer-logo { font-family: 'Playfair Display', serif; font-size: 1.5rem; color: var(--cream); margin-bottom: 1rem; }
+  .footer-logo span { color: var(--terra); }
+  .footer-desc { font-size: 0.85rem; line-height: 1.7; max-width: 260px; }
+  .footer-col h4 { color: var(--cream); font-size: 0.9rem; font-weight: 500; margin-bottom: 1.2rem; }
+  .footer-col ul { list-style: none; }
+  .footer-col ul li { font-size: 0.83rem; margin-bottom: 0.6rem; cursor: pointer; transition: color 0.2s; }
+  .footer-col ul li:hover { color: var(--cream); }
+  .footer-bottom { display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; }
+  .footer-bottom span { color: rgba(245,239,230,0.4); }
+</style>
+</head>
+<body>
+
+<!-- NAV -->
+<nav>
+  <div class="logo">Smart<span>Bazaar</span></div>
+  <div class="nav-links">
+    <a href="#">Ürünler</a>
+    <a href="#">Kategoriler</a>
+    <a href="#">Satıcılar</a>
+    <a href="#">Kampanyalar</a>
+    <a href="#">Hakkımızda</a>
+  </div>
+  <div class="nav-right">
+    <div class="cart-icon">🛒<span class="cart-badge">0</span></div>
+    <button class="btn-outline">Giriş Yap</button>
+    <button class="btn-primary">Kayıt Ol</button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-left">
+    <div class="hero-badge">✦ TÜRKİYE'NİN AKILLI ALIŞVERİŞ PLATFORMU</div>
+    <h1>
+      Her Ürünü<br>
+      <em>Akıllıca</em><br>
+      Keşfet
+    </h1>
+    <p class="hero-desc">
+      Binlerce ürün, güvenilir satıcılar ve en iyi fiyatlar bir arada. SmartBazaar ile alışverişin tadını çıkar.
+    </p>
+    <div class="hero-actions">
+      <button class="btn-primary" style="padding: 0.8rem 2rem; font-size: 0.95rem;">Alışverişe Başla</button>
+      <button class="btn-outline" style="padding: 0.8rem 2rem; font-size: 0.95rem;">Nasıl Çalışır?</button>
+    </div>
+    <div class="hero-stats">
+      <div>
+        <div class="stat-num">48K+</div>
+        <div class="stat-label">Mutlu Müşteri</div>
+      </div>
+      <div>
+        <div class="stat-num">12K+</div>
+        <div class="stat-label">Ürün Çeşidi</div>
+      </div>
+      <div>
+        <div class="stat-num">4.9★</div>
+        <div class="stat-label">Müşteri Puanı</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="hero-visual">
+    <div class="hero-circle">
+      <div class="hero-product-box">
+        <div class="product-img-placeholder">🛍️</div>
+        <div class="product-label">Özel Koleksiyon</div>
+        <div class="product-price">₺299'dan başlayan</div>
+        <button class="add-btn">+</button>
+      </div>
+    </div>
+    <div class="floating-card top-right">
+      <div class="dot"></div>
+      Güvenli Ödeme
+    </div>
+    <div class="floating-card bottom-left">
+      <div class="dot"></div>
+      Hızlı Teslimat
+    </div>
+  </div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="categories">
+  <div class="section-header">
+    <h2 class="section-title">Popüler <span>Kategoriler</span></h2>
+    <a class="see-all">Tümünü Gör →</a>
+  </div>
+  <div class="cat-grid">
+    <div class="cat-card featured">
+      <div class="cat-icon">👗</div>
+      <div class="cat-name">Moda & Giyim</div>
+      <div class="cat-count">2.400+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="cat-card">
+      <div class="cat-icon">📱</div>
+      <div class="cat-name">Elektronik</div>
+      <div class="cat-count">1.800+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="cat-card">
+      <div class="cat-icon">🏠</div>
+      <div class="cat-name">Ev & Yaşam</div>
+      <div class="cat-count">3.200+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="cat-card">
+      <div class="cat-icon">🌿</div>
+      <div class="cat-name">Sağlık & Güzellik</div>
+      <div class="cat-count">900+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="cat-card">
+      <div class="cat-icon">📚</div>
+      <div class="cat-name">Kitap & Kırtasiye</div>
+      <div class="cat-count">600+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="cat-card">
+      <div class="cat-icon">⚽</div>
+      <div class="cat-name">Spor & Outdoor</div>
+      <div class="cat-count">1.100+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="cat-card">
+      <div class="cat-icon">🧸</div>
+      <div class="cat-name">Oyuncak & Bebek</div>
+      <div class="cat-count">750+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+    <div class="cat-card">
+      <div class="cat-icon">🎨</div>
+      <div class="cat-name">Sanat & El Sanatları</div>
+      <div class="cat-count">400+ ürün</div>
+      <span class="cat-arrow">→</span>
+    </div>
+  </div>
+</section>
+
+<!-- FEATURED PRODUCTS -->
+<section class="products">
+  <div class="section-header">
+    <h2 class="section-title">Öne Çıkan <span>Ürünler</span></h2>
+    <a class="see-all">Tümünü Gör →</a>
+  </div>
+  <div class="product-grid">
+    <div class="product-card">
+      <div class="product-img" style="background: #F0EBE3;">
+        <span class="badge-new">YENİ</span>
+        👜
+      </div>
+      <div class="product-body">
+        <div class="product-brand">ModaHouse</div>
+        <div class="product-name">Deri Omuz Çantası</div>
+        <div class="product-footer">
+          <div><span class="product-price-big">₺649</span></div>
+          <button class="add-to-cart-btn">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-img" style="background: #E8F0F5;">
+        <span class="badge-sale">%30 İNDİRİM</span>
+        🎧
+      </div>
+      <div class="product-body">
+        <div class="product-brand">TechZone</div>
+        <div class="product-name">Kablosuz Kulaklık Pro</div>
+        <div class="product-footer">
+          <div>
+            <span class="product-price-big">₺899</span>
+            <span class="product-old-price">₺1.299</span>
+          </div>
+          <button class="add-to-cart-btn">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-img" style="background: #F5EEE8;">
+        <span class="badge-new">YENİ</span>
+        🕯️
+      </div>
+      <div class="product-body">
+        <div class="product-brand">EviDekor</div>
+        <div class="product-name">El Yapımı Mum Seti</div>
+        <div class="product-footer">
+          <div><span class="product-price-big">₺249</span></div>
+          <button class="add-to-cart-btn">+</button>
+        </div>
+      </div>
+    </div>
+    <div class="product-card">
+      <div class="product-img" style="background: #EDF5EE;">
+        <span class="badge-sale">%20 İNDİRİM</span>
+        🌿
+      </div>
+      <div class="product-body">
+        <div class="product-brand">NaturaSkin</div>
+        <div class="product-name">Organik Bakım Seti</div>
+        <div class="product-footer">
+          <div>
+            <span class="product-price-big">₺379</span>
+            <span class="product-old-price">₺479</span>
+          </div>
+          <button class="add-to-cart-btn">+</button>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- HOW IT WORKS -->
+<section class="how">
+  <h2 class="section-title">Nasıl <span>Çalışır?</span></h2>
+  <div class="how-grid">
+    <div class="how-step">
+      <div class="step-num">01</div>
+      <div class="step-icon">🔍</div>
+      <div class="step-title">Ürünü Keşfet</div>
+      <div class="step-desc">Binlerce ürün arasından kolayca arama yapın, filtreleyin ve karşılaştırın.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">02</div>
+      <div class="step-icon">🛒</div>
+      <div class="step-title">Sepete Ekle</div>
+      <div class="step-desc">Beğendiğiniz ürünleri sepetinize ekleyin, istediğiniz zaman düzenleyin.</div>
+    </div>
+    <div class="how-step">
+      <div class="step-num">03</div>
+      <div class="step-icon">🚀</div>
+      <div class="step-title">Hızla Teslim Al</div>
+      <div class="step-desc">Güvenli ödeme yapın ve ürününüzü 48 saat içinde kapınıza teslim edelim.</div>
+    </div>
+  </div>
+</section>
+
+<!-- BANNER -->
+<section class="banner">
+  <div>
+    <span class="banner-tag">SATICI OL</span>
+    <h2>Ürünlerini SmartBazaar'da Sat</h2>
+    <p>Kendi mağazanı kur, binlerce müşteriye ulaş. Kolay ürün yönetimi ve güvenli ödeme sistemiyle kazanmaya başla.</p>
+    <button class="btn-primary" style="padding: 0.85rem 2rem; font-size: 0.95rem;">Mağaza Aç →</button>
+  </div>
+  <div class="banner-visual">
+    <div class="bv-card">
+      📦
+      <div class="bv-label">Kolay Yükleme</div>
+    </div>
+    <div class="bv-card">
+      📊
+      <div class="bv-label" style="color:rgba(255,255,255,0.8);">Anlık Analiz</div>
+    </div>
+    <div class="bv-card">
+      💳
+      <div class="bv-label">Güvenli Ödeme</div>
+    </div>
+    <div class="bv-card">
+      🚀
+      <div class="bv-label">Hızlı Büyü</div>
+    </div>
+  </div>
+</section>
+
+<!-- TESTIMONIALS -->
+<section class="testimonials">
+  <div class="section-header">
+    <h2 class="section-title">Müşterilerimiz <span>Ne Diyor?</span></h2>
+  </div>
+  <div class="testi-grid">
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">"SmartBazaar sayesinde aradığım ürünlere kolayca ulaşıyorum. Teslimat hızı inanılmaz, kesinlikle tavsiye ederim!"</p>
+      <div class="testi-user">
+        <div class="avatar">AY</div>
+        <div>
+          <div class="user-name">Ayşe Yılmaz</div>
+          <div class="user-role">İstanbul</div>
+        </div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">"Satıcı olarak başladığımda ciddi endişelerim vardı ama platform çok kullanıcı dostu. Satışlarım her ay artıyor."</p>
+      <div class="testi-user">
+        <div class="avatar">MK</div>
+        <div>
+          <div class="user-name">Mehmet Kaya</div>
+          <div class="user-role">Ankara</div>
+        </div>
+      </div>
+    </div>
+    <div class="testi-card">
+      <div class="testi-stars">★★★★★</div>
+      <p class="testi-text">"Ürün kalitesi ve müşteri hizmetleri mükemmel. Sorunlarım anında çözüldü, çok memnunum."</p>
+      <div class="testi-user">
+        <div class="avatar">ZD</div>
+        <div>
+          <div class="user-name">Zeynep Demir</div>
+          <div class="user-role">İzmir</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer>
+  <div class="footer-grid">
+    <div>
+      <div class="footer-logo">Smart<span>Bazaar</span></div>
+      <p class="footer-desc">Türkiye'nin akıllı e-ticaret platformu. Güvenli alışveriş, hızlı teslimat ve kaliteli ürünler.</p>
+    </div>
+    <div class="footer-col">
+      <h4>Platform</h4>
+      <ul>
+        <li>Nasıl Çalışır?</li>
+        <li>Satıcı Ol</li>
+        <li>Kampanyalar</li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Destek</h4>
+      <ul>
+        <li>Yardım Merkezi</li>
+        <li>İade & Değişim</li>
+        <li>Kargo Takibi</li>
+        <li>İletişim</li>
+      </ul>
+    </div>
+    <div class="footer-col">
+      <h4>Hukuki</h4>
+      <ul>
+        <li>Gizlilik Politikası</li>
+        <li>Kullanım Koşulları</li>
+        <li>KVKK</li>
+        <li>Çerez Politikası</li>
+      </ul>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2025 SmartBazaar. Tüm hakları saklıdır.</span>
+    <span>Işık Üniversitesi — Software Project</span>
+  </div>
+</footer>
+
+</body>
+</html>
