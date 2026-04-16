@@ -1,0 +1,99 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+:root {
+  --primary-color: #4F46E5; /* Indigo 600 */
+  --primary-hover: #4338CA;
+  --bg-color: #F8FAFC; /* Slate 50 */
+  --text-dark: #0F172A; /* Slate 900 */
+  --text-muted: #64748B;
+  --surface-color: #FFFFFF;
+  --border-color: #E2E8F0;
+  
+  --shadow-sm: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+}
+
+body {
+  font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  background-color: var(--bg-color);
+  color: var(--text-dark);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* Base custom styles to override Bootstrap defaults for a more minimalist/modern look */
+.btn-primary {
+  background-color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  transition: all 0.2s ease-in-out;
+  border-radius: 8px;
+  font-weight: 500;
+}
+
+.btn-primary:hover {
+  background-color: var(--primary-hover) !important;
+  border-color: var(--primary-hover) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--shadow-md);
+}
+
+.card {
+  border: 1px solid var(--border-color);
+  border-radius: 12px;
+  background-color: var(--surface-color);
+  box-shadow: var(--shadow-sm);
+  transition: all 0.3s ease;
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: var(--shadow-lg);
+}
+
+.form-control {
+  border-radius: 8px;
+  border: 1px solid var(--border-color);
+  padding: 0.75rem 1rem;
+  transition: border-color 0.2s;
+}
+
+.form-control:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(79, 70, 229, 0.1);
+}
+
+.navbar {
+  background-color: rgba(255, 255, 255, 0.8) !important;
+  backdrop-filter: blur(12px);
+  border-bottom: 1px solid var(--border-color);
+  box-shadow: var(--shadow-sm);
+}
+
+.nav-link {
+  font-weight: 500;
+  color: var(--text-dark) !important;
+  transition: color 0.2s;
+}
+
+.nav-link:hover {
+  color: var(--primary-color) !important;
+}
+
+/* Animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.animate-fade-in {
+  animation: fadeIn 0.4s ease-out forwards;
+}
+
+/* Utilities */
+.text-primary-custom {
+  color: var(--primary-color) !important;
+}
+
+.bg-surface {
+  background-color: var(--surface-color) !important;
+}
