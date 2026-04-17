@@ -2,8 +2,8 @@ import pandas as pd
 from supabase import create_client, Client
 import os
 
-SUPABASE_URL = "SUPABASE_URL"
-SUPABASE_KEY = "SUPABASE_KEY" # Uyarı: Anon key'ler normalde eyJ ile başlar, eğer bağlantı hatası alırsanız Dashboard'dan 'anon' 'public' key'i alınız.
+SUPABASE_URL = "https://vxlndiazdhncofqavnyh.supabase.co"
+SUPABASE_KEY = "sb_secret_8nGLbGX2ak0SlRkAiRJTnQ_YYuuKT7M" # Uyarı: Anon key'ler normalde eyJ ile başlar, eğer bağlantı hatası alırsanız Dashboard'dan 'anon' 'public' key'i alınız.
 
 print("Supabase'e bağlanılıyor...")
 supabase: Client = create_client(SUPABASE_URL, SUPABASE_KEY)

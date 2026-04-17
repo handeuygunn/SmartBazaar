@@ -60,7 +60,7 @@ def urun_oner_ve_yorumlari_analiz_et():
     
     try:
         # Sizin verdiğiniz güncel API Key:
-        GEMINI_API_KEY = "[ENCRYPTION_KEY]" 
+        GEMINI_API_KEY = "AQ.Ab8RN6K0ZWC5vgEvMftPkBfUjoEI9V6lIJi7ul23VAqsUK-yiA" 
         
         # En Güncel SDK: google-genai
         client = genai.Client(api_key=GEMINI_API_KEY)

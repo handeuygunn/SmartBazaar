@@ -7,6 +7,7 @@ import Profile from './pages/Profile';
 import Cart from './pages/Cart';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import ProductDetail from './pages/ProductDetail';
+import Chatbot from './components/Chatbot';
 
 function App() {
   return (
@@ -28,6 +29,7 @@ function App() {
           <span className="text-muted">© 2026 smartBazaar. All rights reserved.</span>
         </div>
       </footer>
+      <Chatbot />
     </div>
   );
 }
