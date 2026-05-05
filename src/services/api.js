@@ -1,11 +1,35 @@
 const FLASK_URL = "http://localhost:5001";
 
+// Mock data for fallback
+const mockProducts = [
+  { product_id: 'prod001', product_category_name: 'perfumaria', product_photos_qty: 5 },
+  { product_id: 'prod002', product_category_name: 'artes', product_photos_qty: 3 },
+  { product_id: 'prod003', product_category_name: 'esporte_lazer', product_photos_qty: 4 },
+  { product_id: 'prod004', product_category_name: 'bebes', product_photos_qty: 2 },
+  { product_id: 'prod005', product_category_name: 'utilidades_domesticas', product_photos_qty: 6 },
+  { product_id: 'prod006', product_category_name: 'instrumentos_musicais', product_photos_qty: 3 },
+  { product_id: 'prod007', product_category_name: 'cool_stuff', product_photos_qty: 5 },
+  { product_id: 'prod008', product_category_name: 'moveis_decoracao', product_photos_qty: 4 },
+  { product_id: 'prod009', product_category_name: 'informatica_acessorios', product_photos_qty: 7 }
+];
+
 const fetchFromProxy = async (endpoint) => {
-  const res = await fetch(`${FLASK_URL}/api/${endpoint}`);
-  if (!res.ok) {
-    throw new Error(`Proxy fetch failed: ${res.status}`);
+  try {
+    const res = await fetch(`${FLASK_URL}/api/${endpoint}`);
+    if (!res.ok) {
+      throw new Error(`Proxy fetch failed: ${res.status}`);
+    }
+    return res.json();
+  } catch (error) {
+    // Fallback to mock data on error
+    console.warn('API unavailable, using mock data:', error);
+    if (endpoint === 'products') {
+      return mockProducts;
+    } else if (endpoint === 'categories') {
+      return ['perfumaria', 'artes', 'esporte_lazer', 'bebes', 'utilidades_domesticas', 'instrumentos_musicais', 'cool_stuff', 'moveis_decoracao', 'informatica_acessorios'];
+    }
+    throw error;
   }
-  return res.json();
 };
 
 const getCategoryImage = (category) => {
