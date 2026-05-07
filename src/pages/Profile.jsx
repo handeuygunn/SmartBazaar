@@ -184,8 +184,10 @@ const Profile = () => {
                         </thead>
                         <tbody>
                           {orders.map(order => {
-                            const total = (order.order_items || []).reduce(
-                              (sum, item) => sum + item.price * (item.quantity || 1), 0
+                            const items     = order.order_items || [];
+                            const itemCount = items.length;
+                            const total     = items.reduce(
+                              (sum, item) => sum + (item.price ?? 0) * (item.quantity ?? 1), 0
                             );
                             const date = order.order_purchase_timestamp
                               ? new Date(order.order_purchase_timestamp).toLocaleDateString('tr-TR')
@@ -194,8 +196,16 @@ const Profile = () => {
                               <tr key={order.order_id}>
                                 <td className="fw-medium small text-muted">{order.order_id.slice(0, 8)}...</td>
                                 <td className="text-muted">{date}</td>
-                                <td>{(order.order_items || []).length} ürün</td>
-                                <td className="fw-semibold">${(total * 1.08).toFixed(2)}</td>
+                                <td>
+                                  {itemCount > 0
+                                    ? `${itemCount} ürün`
+                                    : <span className="text-muted small">—</span>}
+                                </td>
+                                <td className="fw-semibold">
+                                  {total > 0
+                                    ? `$${(total * 1.08).toFixed(2)}`
+                                    : <span className="text-muted small">—</span>}
+                                </td>
                                 <td>
                                   <span className={`badge ${statusBadge(order.order_status)}`}>
                                     {order.order_status}

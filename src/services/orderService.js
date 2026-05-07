@@ -26,28 +26,42 @@ export const createOrder = async (userId, cartItems) => {
     .from('order_items')
     .insert(orderItems);
 
-  if (itemsError) throw new Error(itemsError.message);
+  if (itemsError) {
+    // FK violation (23503): product_id doesn't exist in products table
+    // (e.g. mock product IDs). Retry without product_id reference.
+    if (itemsError.code === '23503') {
+      const itemsWithoutRef = orderItems.map(({ product_id, ...rest }) => rest);
+      const { error: retryError } = await supabase
+        .from('order_items')
+        .insert(itemsWithoutRef);
+      if (retryError) throw new Error(retryError.message);
+    } else {
+      throw new Error(itemsError.message);
+    }
+  }
 
   return orderId;
 };
 
 export const fetchUserOrders = async (userId) => {
-  const { data, error } = await supabase
+  const { data: orders, error: ordersError } = await supabase
     .from('orders')
-    .select(`
-      order_id,
-      order_status,
-      order_purchase_timestamp,
-      order_items (
-        order_item_id,
-        product_id,
-        price,
-        quantity
-      )
-    `)
+    .select('order_id, order_status, order_purchase_timestamp')
     .eq('user_id', userId)
     .order('order_purchase_timestamp', { ascending: false });
 
-  if (error) throw new Error(error.message);
-  return data || [];
+  if (ordersError) throw new Error(ordersError.message);
+  if (!orders?.length) return [];
+
+  const { data: items, error: itemsError } = await supabase
+    .from('order_items')
+    .select('order_id, order_item_id, product_id, price, quantity')
+    .in('order_id', orders.map(o => o.order_id));
+
+  if (itemsError) throw new Error(itemsError.message);
+
+  return orders.map(order => ({
+    ...order,
+    order_items: (items || []).filter(item => item.order_id === order.order_id),
+  }));
 };

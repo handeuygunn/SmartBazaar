@@ -2,15 +2,30 @@ const FLASK_URL = "http://localhost:5001";
 const PAGE_SIZE  = 12;
 
 const mockProducts = [
-  { product_id: 'prod001', product_category_name: 'perfumaria',           product_photos_qty: 5 },
-  { product_id: 'prod002', product_category_name: 'artes',                product_photos_qty: 3 },
-  { product_id: 'prod003', product_category_name: 'esporte_lazer',        product_photos_qty: 4 },
-  { product_id: 'prod004', product_category_name: 'bebes',                product_photos_qty: 2 },
-  { product_id: 'prod005', product_category_name: 'utilidades_domesticas',product_photos_qty: 6 },
-  { product_id: 'prod006', product_category_name: 'instrumentos_musicais',product_photos_qty: 3 },
-  { product_id: 'prod007', product_category_name: 'cool_stuff',           product_photos_qty: 5 },
-  { product_id: 'prod008', product_category_name: 'moveis_decoracao',     product_photos_qty: 4 },
+  { product_id: 'prod001', product_category_name: 'perfumaria',            product_photos_qty: 5 },
+  { product_id: 'prod002', product_category_name: 'artes',                 product_photos_qty: 3 },
+  { product_id: 'prod003', product_category_name: 'esporte_lazer',         product_photos_qty: 4 },
+  { product_id: 'prod004', product_category_name: 'bebes',                 product_photos_qty: 2 },
+  { product_id: 'prod005', product_category_name: 'utilidades_domesticas', product_photos_qty: 6 },
+  { product_id: 'prod006', product_category_name: 'instrumentos_musicais', product_photos_qty: 3 },
+  { product_id: 'prod007', product_category_name: 'cool_stuff',            product_photos_qty: 5 },
+  { product_id: 'prod008', product_category_name: 'moveis_decoracao',      product_photos_qty: 4 },
   { product_id: 'prod009', product_category_name: 'informatica_acessorios',product_photos_qty: 7 },
+  { product_id: 'prod010', product_category_name: 'perfumaria',            product_photos_qty: 4 },
+  { product_id: 'prod011', product_category_name: 'esporte_lazer',         product_photos_qty: 6 },
+  { product_id: 'prod012', product_category_name: 'cool_stuff',            product_photos_qty: 3 },
+  { product_id: 'prod013', product_category_name: 'artes',                 product_photos_qty: 5 },
+  { product_id: 'prod014', product_category_name: 'bebes',                 product_photos_qty: 4 },
+  { product_id: 'prod015', product_category_name: 'moveis_decoracao',      product_photos_qty: 2 },
+  { product_id: 'prod016', product_category_name: 'utilidades_domesticas', product_photos_qty: 7 },
+  { product_id: 'prod017', product_category_name: 'informatica_acessorios',product_photos_qty: 5 },
+  { product_id: 'prod018', product_category_name: 'instrumentos_musicais', product_photos_qty: 4 },
+  { product_id: 'prod019', product_category_name: 'esporte_lazer',         product_photos_qty: 3 },
+  { product_id: 'prod020', product_category_name: 'perfumaria',            product_photos_qty: 6 },
+  { product_id: 'prod021', product_category_name: 'cool_stuff',            product_photos_qty: 2 },
+  { product_id: 'prod022', product_category_name: 'artes',                 product_photos_qty: 4 },
+  { product_id: 'prod023', product_category_name: 'bebes',                 product_photos_qty: 5 },
+  { product_id: 'prod024', product_category_name: 'moveis_decoracao',      product_photos_qty: 3 },
 ];
 
 // Consistent hash so same product always gets same price/rating regardless of page
@@ -20,6 +35,22 @@ const hashId = (str) => {
   return Math.abs(h);
 };
 
+const mockFallback = (endpoint) => {
+  if (endpoint === 'categories') {
+    return ['perfumaria','artes','esporte_lazer','bebes','utilidades_domesticas','instrumentos_musicais','cool_stuff','moveis_decoracao','informatica_acessorios'];
+  }
+  if (endpoint.startsWith('products')) {
+    const qs       = endpoint.includes('?') ? endpoint.split('?')[1] : '';
+    const params   = new URLSearchParams(qs);
+    const limit    = parseInt(params.get('limit')  || '10000', 10);
+    const offset   = parseInt(params.get('offset') || '0',     10);
+    const category = params.get('category') || '';
+    let   data     = category ? mockProducts.filter(p => p.product_category_name === category) : mockProducts;
+    return data.slice(offset, offset + limit);
+  }
+  return null;
+};
+
 const fetchFromProxy = async (endpoint) => {
   try {
     const res = await fetch(`${FLASK_URL}/api/${endpoint}`);
@@ -27,8 +58,8 @@ const fetchFromProxy = async (endpoint) => {
     return res.json();
   } catch (error) {
     console.warn('API unavailable, using mock data:', error);
-    if (endpoint.startsWith('products')) return mockProducts;
-    if (endpoint === 'categories') return ['perfumaria','artes','esporte_lazer','bebes','utilidades_domesticas','instrumentos_musicais','cool_stuff','moveis_decoracao','informatica_acessorios'];
+    const fallback = mockFallback(endpoint);
+    if (fallback !== null) return fallback;
     throw error;
   }
 };
@@ -51,7 +82,7 @@ const getCategoryImage = (category) => {
 const transformProduct = (p) => {
   const priceRange   = [29.99, 59.99, 120.00, 250.00, 15.50];
   const categoryName = p.product_category_name || 'general';
-  const isAdmin      = /^[A-Z\-]+$/.test(p.product_id);
+  const isAdmin      = /^[A-Z-]+$/.test(p.product_id);
   const h            = hashId(p.product_id);
   return {
     id:         p.product_id,
