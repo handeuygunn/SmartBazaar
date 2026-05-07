@@ -7,9 +7,9 @@ const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
-    name: user?.name || '',
+    name: user?.user_metadata?.name || '',
     email: user?.email || '',
-    phone: user?.phone || ''
+    phone: user?.user_metadata?.phone || ''
   });
   const [message, setMessage] = useState('');
 
@@ -46,7 +46,7 @@ const Profile = () => {
               <div className="bg-white rounded-circle d-inline-flex align-items-center justify-content-center mb-3 shadow-sm" style={{ width: '80px', height: '80px' }}>
                 <UserIcon size={32} className="text-primary" />
               </div>
-              <h5 className="fw-bold mb-1">{user.name}</h5>
+              <h5 className="fw-bold mb-1">{user.user_metadata?.name || user.email}</h5>
               <p className="text-muted small mb-0">{user.email}</p>
             </div>
             <div className="list-group list-group-flush border-0">

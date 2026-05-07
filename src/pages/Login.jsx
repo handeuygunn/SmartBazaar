@@ -34,6 +34,16 @@ const Login = () => {
             <div className="text-center mb-5">
               <h2 className="fw-bold mb-2">Welcome Back</h2>
               <p className="text-muted">Enter your credentials to access your account.</p>
+              <div
+                className="bg-light p-3 rounded mt-3 text-start small"
+                style={{ cursor: 'pointer' }}
+                onClick={() => { setEmail('testaccount@hotmail.com'); setPassword('123456'); }}
+                title="Click to autofill"
+              >
+                <span className="fw-bold d-block text-primary mb-1">Test Account <span className="text-muted fw-normal">(click to fill)</span></span>
+                <div>Email: <code>testaccount@hotmail.com</code></div>
+                <div>Password: <code>123456</code></div>
+              </div>
             </div>
 
             {error && <div className="alert alert-danger shadow-sm rounded-3">{error}</div>}

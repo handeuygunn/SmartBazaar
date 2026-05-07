@@ -8,6 +8,11 @@ except ImportError:
     pass # handle in endpoint
 
 import requests
+try:
+    import pandas as pd
+    PANDAS_AVAILABLE = True
+except ImportError:
+    PANDAS_AVAILABLE = False
 
 app = Flask(__name__)
 CORS(app)
@@ -29,8 +34,48 @@ def require_admin(f):
 SUPABASE_URL = "https://vxlndiazdhncofqavnyh.supabase.co"
 SUPABASE_KEY = "sb_secret_8nGLbGX2ak0SlRkAiRJTnQ_YYuuKT7M"
 
-# Database'den veri Supabase üzerinden alınıyor
-df_prod_reviews = None
+# CSV'den yükle, yoksa Supabase'den çek
+def load_review_data():
+    if not PANDAS_AVAILABLE:
+        return None
+
+    # 1. CSV dosyalarından dene (1_fetch_data.py çalıştırılmışsa)
+    csv_dirs = ["data", "../ml-service/data"]
+    for base in csv_dirs:
+        try:
+            df_reviews  = pd.read_csv(f"{base}/order_reviews.csv")
+            df_items    = pd.read_csv(f"{base}/order_items.csv")
+            df_products = pd.read_csv(f"{base}/products.csv")
+            if 'review_comment_message' not in df_reviews.columns:
+                continue
+            df_reviews = df_reviews.dropna(subset=['review_comment_message'])
+            df = pd.merge(df_reviews, df_items, on='order_id', how='inner')
+            df = pd.merge(df, df_products[['product_id', 'product_category_name']], on='product_id', how='inner')
+            print(f"Chatbot verisi CSV'den yüklendi: {base}")
+            return df
+        except Exception:
+            continue
+
+    # 2. Supabase'den çek
+    try:
+        headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+        r_reviews  = requests.get(f"{SUPABASE_URL}/rest/v1/order_reviews?select=order_id,review_score,review_comment_message&limit=10000", headers=headers)
+        r_items    = requests.get(f"{SUPABASE_URL}/rest/v1/order_items?select=order_id,product_id,price&limit=10000", headers=headers)
+        r_products = requests.get(f"{SUPABASE_URL}/rest/v1/products?select=product_id,product_category_name&limit=10000", headers=headers)
+        if r_reviews.ok and r_items.ok and r_products.ok:
+            df_reviews  = pd.DataFrame(r_reviews.json()).dropna(subset=['review_comment_message'])
+            df_items    = pd.DataFrame(r_items.json())
+            df_products = pd.DataFrame(r_products.json())
+            df = pd.merge(df_reviews, df_items, on='order_id', how='inner')
+            df = pd.merge(df, df_products[['product_id', 'product_category_name']], on='product_id', how='inner')
+            print("Chatbot verisi Supabase'den yüklendi.")
+            return df
+    except Exception as e:
+        print(f"Supabase'den veri yükleme hatası: {e}")
+
+    return None
+
+df_prod_reviews = load_review_data()
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
@@ -273,6 +318,7 @@ def recommend():
         ai_context += "---\n"
         
     try:
+        # API KEY SURESI DOLU DEĞİŞTİRİLMELİ
         GEMINI_API_KEY = "AQ.Ab8RN6K0ZWC5vgEvMftPkBfUjoEI9V6lIJi7ul23VAqsUK-yiA" 
         
         client = genai.Client(api_key=GEMINI_API_KEY)
