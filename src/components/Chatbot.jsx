@@ -26,7 +26,7 @@ const Chatbot = () => {
       }
     } catch (error) {
       console.error("Chatbot error:", error);
-      let errorMsg = 'Üzgünüm, API ile iletişim kurarken bir hata oluştu.';
+      let errorMsg = 'Üzgünüm, şu an isteğini yerine getiremiyorum. Daha sonra tekrar deneyebilirsin.';
       if (error.response && error.response.data && error.response.data.error) {
          errorMsg = `Hata: ${error.response.data.error}`;
       }
