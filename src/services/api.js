@@ -52,8 +52,19 @@ export const fetchProducts = async (filters = {}) => {
   
   let results = data.map((p, index) => {
     const categoryName = p.product_category_name || 'general';
-    const title = categoryName.charAt(0).toUpperCase() + categoryName.slice(1).replace(/_/g, ' ') + ` Item ${p.product_id.slice(0,4)}`;
     const priceRange = [29.99, 59.99, 120.00, 250.00, 15.50];
+    
+    // Detect admin-added products by uppercase ID pattern
+    const isAdminProduct = /^[A-Z\-]+$/.test(p.product_id);
+    let title;
+    
+    if (isAdminProduct) {
+      // For admin products, use the product_id as title (replace dashes with spaces)
+      title = p.product_id.replace(/-/g, ' ');
+    } else {
+      // For default products, use category + ID pattern
+      title = categoryName.charAt(0).toUpperCase() + categoryName.slice(1).replace(/_/g, ' ') + ` Item ${p.product_id.slice(0,4)}`;
+    }
     
     return {
       id: p.product_id,
@@ -118,8 +129,84 @@ export const fetchCategories = async () => {
 };
 
 export const updateProduct = async (id, data) => {
-  return { id, ...data };
+  try {
+    const user = JSON.parse(localStorage.getItem('smartbazaar_user') || '{}');
+    const res = await fetch(`${FLASK_URL}/api/products/${id}`, {
+      method: 'PUT',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer admin',
+        'X-Admin-Token': user.role === 'admin' ? 'admin' : ''
+      },
+      body: JSON.stringify(data)
+    });
+    if (!res.ok) throw new Error('Update failed');
+    const result = await res.json();
+    return result.product || { id, ...data };
+  } catch (error) {
+    console.error('Update error:', error);
+    throw error;
+  }
 };
+
+export const createProduct = async (productData) => {
+  try {
+    const user = JSON.parse(localStorage.getItem('smartbazaar_user') || '{}');
+    if (user.role !== 'admin') {
+      throw new Error('Only admins can create products');
+    }
+    
+    const res = await fetch(`${FLASK_URL}/api/products`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer admin',
+        'X-Admin-Token': 'admin'
+      },
+      body: JSON.stringify(productData)
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to create product');
+    }
+    
+    const result = await res.json();
+    return result.product;
+  } catch (error) {
+    console.error('Create product error:', error);
+    throw error;
+  }
+};
+
+export const deleteProduct = async (id) => {
+  try {
+    const user = JSON.parse(localStorage.getItem('smartbazaar_user') || '{}');
+    if (user.role !== 'admin') {
+      throw new Error('Only admins can delete products');
+    }
+    
+    const res = await fetch(`${FLASK_URL}/api/products/${id}`, {
+      method: 'DELETE',
+      headers: {
+        'Authorization': 'Bearer admin',
+        'X-Admin-Token': 'admin'
+      }
+    });
+    
+    if (!res.ok) {
+      const error = await res.json();
+      throw new Error(error.error || 'Failed to delete product');
+    }
+    
+    const result = await res.json();
+    return result;
+  } catch (error) {
+    console.error('Delete product error:', error);
+    throw error;
+  }
+};
+
 
 export const sendChatMessage = async (message) => {
   return { text: "Chatbot logic is handled in Chatbot.jsx via our Python Flask API." };

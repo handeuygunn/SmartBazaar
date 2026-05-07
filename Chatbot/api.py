@@ -1,7 +1,7 @@
-import pandas as pd
 import os
-from flask import Flask, jsonify
+from flask import Flask, jsonify, request
 from flask_cors import CORS
+from functools import wraps
 try:
     from google import genai
 except ImportError:
@@ -12,44 +12,48 @@ import requests
 app = Flask(__name__)
 CORS(app)
 
+# Admin doğrulama middleware
+def require_admin(f):
+    @wraps(f)
+    def decorated_function(*args, **kwargs):
+        auth_header = request.headers.get('Authorization', '')
+        admin_token = request.headers.get('X-Admin-Token', '')
+        
+        # Admin kontrolü: Bearer token veya X-Admin-Token header'ı
+        if auth_header == 'Bearer admin' or admin_token == 'admin':
+            return f(*args, **kwargs)
+        
+        return jsonify({"error": "Admin authorization required"}), 403
+    return decorated_function
+
 SUPABASE_URL = "https://vxlndiazdhncofqavnyh.supabase.co"
 SUPABASE_KEY = "sb_secret_8nGLbGX2ak0SlRkAiRJTnQ_YYuuKT7M"
 
-# Scriptin bulunduğu dizini baz alarak veri yollarını oluşturuyoruz
-BASE_DIR = os.path.dirname(os.path.abspath(__file__))
-DATA_DIR = os.path.join(BASE_DIR, "../ml-service/data")
-
-print("1. VERİLER YÜKLENİYOR...")
-try:
-    df_reviews = pd.read_csv(os.path.join(DATA_DIR, "order_reviews.csv"))
-    df_items = pd.read_csv(os.path.join(DATA_DIR, "order_items.csv"))
-    df_products = pd.read_csv(os.path.join(DATA_DIR, "products.csv"))
-
-    if 'review_comment_message' in df_reviews.columns:
-        df_reviews = df_reviews.dropna(subset=['review_comment_message'])
-        df_prod_reviews = pd.merge(df_reviews, df_items, on='order_id', how='inner')
-        df_prod_reviews = pd.merge(df_prod_reviews, df_products[['product_id', 'product_category_name']], on='product_id', how='inner')
-except Exception as e:
-    print("Veriler eksik veya yüklenemedi:", e)
-    df_prod_reviews = None
+# Database'den veri Supabase üzerinden alınıyor
+df_prod_reviews = None
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
-    # Frontend'in secret key ile supabase'e erişmesi yasak olduğu için proxy yapıyoruz
-    url = f"{SUPABASE_URL}/rest/v1/products?select=*&limit=100"
+    # Tüm ürünleri döndür - en yeni ilk (silinmiş olanlar zaten veritabanında yok)
+    # LIMIT'i artırdık çünkü bazı setuplarda POST'tan sonra eklenen product'lar belirli bir range'de olabiliyor
+    url = f"{SUPABASE_URL}/rest/v1/products?select=*&order=product_id.desc&limit=10000"
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}"
     }
     try:
         response = requests.get(url, headers=headers)
-        return jsonify(response.json()), 200
+        if response.ok:
+            return jsonify(response.json()), 200
+        else:
+            return jsonify({"error": f"Failed to fetch products: {response.text}"}), 500
     except Exception as e:
+        print(f"Error fetching products: {e}")
         return jsonify({"error": str(e)}), 500
 
 @app.route('/api/categories', methods=['GET'])
 def get_categories():
-    url = f"{SUPABASE_URL}/rest/v1/products?select=product_category_name&limit=500"
+    url = f"{SUPABASE_URL}/rest/v1/products?select=product_category_name"
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}"
@@ -61,6 +65,164 @@ def get_categories():
         return jsonify(cats), 200
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+# POST endpoint - Yeni ürün ekleme (Admin only)
+@app.route('/api/products', methods=['POST'])
+@require_admin
+def create_product():
+    try:
+        data = request.get_json()
+        
+        # Gerekli alanları kontrol et
+        required_fields = ['id', 'title', 'price', 'category']
+        if not all(field in data for field in required_fields):
+            return jsonify({"error": "Missing required fields: id, title, price, category"}), 400
+        
+        # Supabase'e INSERT
+        url = f"{SUPABASE_URL}/rest/v1/products"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        
+        product_data = {
+            "product_id": data.get('id'),
+            "product_category_name": data.get('category'),
+            "product_name_lenght": len(data.get('title', '')),
+            "product_description_lenght": len(data.get('description', '')),
+            "product_photos_qty": data.get('stock', 0)
+        }
+        
+        response = requests.post(url, json=product_data, headers=headers)
+        
+        if response.status_code in [200, 201]:
+            return jsonify({
+                "success": True,
+                "product": {
+                    "id": data.get('id'),
+                    "title": data.get('title'),
+                    "price": data.get('price'),
+                    "category": data.get('category'),
+                    "stock": data.get('stock', 0),
+                    "brand": data.get('brand', 'SmartBazaar')
+                }
+            }), 201
+        else:
+            return jsonify({"error": f"Supabase error: {response.text}"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# PUT endpoint - Ürün güncelleme (Admin only)
+@app.route('/api/products/<product_id>', methods=['PUT'])
+@require_admin
+def update_product(product_id):
+    try:
+        data = request.get_json()
+        
+        # Supabase'te UPDATE
+        url = f"{SUPABASE_URL}/rest/v1/products?product_id=eq.{product_id}"
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json",
+            "Prefer": "return=representation"
+        }
+        
+        update_data = {}
+        if 'title' in data:
+            update_data['product_name_lenght'] = len(data['title'])
+        if 'stock' in data:
+            update_data['product_photos_qty'] = data['stock']
+        if 'category' in data:
+            update_data['product_category_name'] = data['category']
+        
+        response = requests.patch(url, json=update_data, headers=headers)
+        
+        if response.status_code in [200, 204]:
+            return jsonify({
+                "success": True,
+                "product": {
+                    "id": product_id,
+                    **data
+                }
+            }), 200
+        else:
+            return jsonify({"error": f"Update failed: {response.text}"}), 500
+            
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+# DELETE endpoint - Ürün silme (Admin only)
+# Akış: 1) order_items kontrolü, 2) varsa sil, 3) ürünü sil
+@app.route('/api/products/<product_id>', methods=['DELETE'])
+@require_admin
+def delete_product(product_id):
+    try:
+        headers = {
+            "apikey": SUPABASE_KEY,
+            "Authorization": f"Bearer {SUPABASE_KEY}",
+            "Content-Type": "application/json"
+        }
+        
+        # 1. Ürüne bağlı order_items var mı kontrolü
+        order_items_url = f"{SUPABASE_URL}/rest/v1/order_items?product_id=eq.{product_id}"
+        order_items_check = requests.get(order_items_url, headers=headers)
+        
+        items_count = 0
+        if order_items_check.status_code == 200:
+            items_data = order_items_check.json()
+            items_count = len(items_data) if isinstance(items_data, list) else 0
+            
+            # 2. Eğer order_items varsa, onları sil
+            if items_count > 0:
+                print(f"Product {product_id} has {items_count} order items, deleting them...")
+                delete_order_items_url = f"{SUPABASE_URL}/rest/v1/order_items?product_id=eq.{product_id}"
+                delete_items_response = requests.delete(delete_order_items_url, headers=headers)
+                
+                if delete_items_response.status_code not in [200, 204]:
+                    return jsonify({
+                        "error": f"Failed to delete order items: {delete_items_response.text}"
+                    }), 500
+                
+                print(f"Order items deleted successfully ({items_count} deleted)")
+        
+        # 3. Şimdi ürünü sil
+        product_url = f"{SUPABASE_URL}/rest/v1/products?product_id=eq.{product_id}"
+        product_delete_response = requests.delete(product_url, headers=headers)
+        
+        if product_delete_response.status_code in [200, 204]:
+            # 4. Deletion log'u kaydet
+            log_url = f"{SUPABASE_URL}/rest/v1/product_deletion_logs"
+            log_data = {
+                "product_id": product_id,
+                "deleted_by": "admin",
+                "related_orders_deleted": items_count
+            }
+            
+            try:
+                log_response = requests.post(log_url, json=log_data, headers=headers)
+                print(f"Product {product_id} deleted and logged (removed {items_count} order items)")
+            except Exception as log_err:
+                print(f"Log yazma hatası (ürün silindi): {log_err}")
+            
+            return jsonify({
+                "success": True, 
+                "message": f"Product {product_id} successfully deleted",
+                "order_items_deleted": items_count
+            }), 200
+        else:
+            error_text = product_delete_response.text
+            print(f"Delete error: {error_text}")
+            return jsonify({"error": f"Delete failed: {error_text}"}), 500
+            
+    except Exception as e:
+        print(f"Error: {e}")
+        return jsonify({"error": str(e)}), 500
+
+
 
 @app.route('/api/chat/recommend', methods=['GET'])
 def recommend():
