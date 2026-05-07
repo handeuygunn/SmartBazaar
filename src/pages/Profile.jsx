@@ -23,6 +23,7 @@ const Profile = () => {
     phone: user?.user_metadata?.phone || ''
   });
   const [message, setMessage] = useState('');
+  const [phoneError, setPhoneError] = useState('');
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState('');
@@ -42,11 +43,23 @@ const Profile = () => {
     return <Navigate to="/login" />;
   }
 
-  const handleUpdate = (e) => {
+  const handleUpdate = async (e) => {
     e.preventDefault();
-    updateProfile(formData);
-    setMessage('Profile updated successfully');
-    setTimeout(() => setMessage(''), 3000);
+    setPhoneError('');
+
+    if (formData.phone && !/^[+]?[\d\s\-().]{7,15}$/.test(formData.phone.trim())) {
+      setPhoneError('Geçerli bir telefon numarası girin (7-15 rakam, +, boşluk, tire kabul edilir).');
+      return;
+    }
+
+    try {
+      await updateProfile(formData);
+      setMessage('Profil başarıyla güncellendi.');
+      setTimeout(() => setMessage(''), 3000);
+    } catch (err) {
+      setMessage('');
+      setPhoneError(err.message || 'Güncelleme başarısız.');
+    }
   };
 
   const handleDelete = () => {
@@ -112,7 +125,13 @@ const Profile = () => {
                       </div>
                       <div className="col-md-6">
                         <label className="form-label small fw-medium">Phone Number</label>
-                        <input className="form-control" placeholder="+1..." value={formData.phone} onChange={e => setFormData({ ...formData, phone: e.target.value })} />
+                        <input
+                          className={`form-control ${phoneError ? 'is-invalid' : ''}`}
+                          placeholder="+90 5XX XXX XX XX"
+                          value={formData.phone}
+                          onChange={e => { setPhoneError(''); setFormData({ ...formData, phone: e.target.value }); }}
+                        />
+                        {phoneError && <div className="invalid-feedback">{phoneError}</div>}
                       </div>
                     </div>
                     <button type="submit" className="btn btn-primary px-4 fw-medium">Update Profile</button>

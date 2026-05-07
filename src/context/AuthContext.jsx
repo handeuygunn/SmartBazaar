@@ -50,10 +50,15 @@ export const AuthProvider = ({ children }) => {
     if (error) throw new Error(error.message);
   };
 
-  const updateProfile = async (data) => {
-    const { error } = await supabase.auth.updateUser({ data });
+  const updateProfile = async ({ name, email, phone }) => {
+    const updates = {};
+    if (email) updates.email = email;
+    if (name !== undefined || phone !== undefined) {
+      updates.data = { name, phone };
+    }
+    const { data, error } = await supabase.auth.updateUser(updates);
     if (error) throw new Error(error.message);
-    setUser((prev) => ({ ...prev, user_metadata: { ...prev.user_metadata, ...data } }));
+    if (data?.user) setUser(data.user);
   };
 
   return (

@@ -79,9 +79,17 @@ df_prod_reviews = load_review_data()
 
 @app.route('/api/products', methods=['GET'])
 def get_products():
-    # Tüm ürünleri döndür - en yeni ilk (silinmiş olanlar zaten veritabanında yok)
-    # LIMIT'i artırdık çünkü bazı setuplarda POST'tan sonra eklenen product'lar belirli bir range'de olabiliyor
-    url = f"{SUPABASE_URL}/rest/v1/products?select=*&order=product_id.desc&limit=10000"
+    limit    = request.args.get('limit',    type=int)
+    offset   = request.args.get('offset',   0, type=int)
+    category = request.args.get('category', '')
+
+    url = f"{SUPABASE_URL}/rest/v1/products?select=*&order=product_id.desc"
+
+    if category:
+        url += f"&product_category_name=eq.{category}"
+
+    url += f"&limit={limit}&offset={offset}" if limit is not None else "&limit=10000"
+
     headers = {
         "apikey": SUPABASE_KEY,
         "Authorization": f"Bearer {SUPABASE_KEY}"
