@@ -1,10 +1,10 @@
-import React, { useContext, useState } from 'react';
+import React, { useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import { User as UserIcon, Package, Settings, LogOut, Trash2 } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const Profile = () => {
-  const { user, updateProfile, logout } = useContext(AuthContext);
+  const { user, updateProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
     name: user?.name || '',

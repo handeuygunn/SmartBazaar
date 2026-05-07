@@ -1,63 +1,63 @@
-import React, { createContext, useState, useEffect } from 'react';
-
-export const AuthContext = createContext();
+import React, { useState, useEffect } from 'react';
+import { supabase } from '../lib/supabase';
+import { AuthContext } from './authContext';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    // Check local storage for user simulation
-    const storedUser = localStorage.getItem('smartbazaar_user');
-    if (storedUser) {
-      setUser(JSON.parse(storedUser));
-    }
-    setLoading(false);
+    supabase.auth.getSession().then(({ data: { session } }) => {
+      setUser(session?.user ?? null);
+      setLoading(false);
+    });
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      setUser(session?.user ?? null);
+    });
+
+    return () => subscription.unsubscribe();
   }, []);
 
   const login = async (email, password) => {
-    // Mock login logic -> in real app, call axios api here
-    return new Promise((resolve, reject) => {
-      setTimeout(() => {
-        if (email === 'admin@smartbazaar.com' && password === 'admin') {
-          const adminUser = { id: 1, name: 'System Admin', email, role: 'admin' };
-          setUser(adminUser);
-          localStorage.setItem('smartbazaar_user', JSON.stringify(adminUser));
-          resolve(adminUser);
-        } else if (email && password) {
-          const normalUser = { id: 2, name: 'Test User', email, role: 'user' };
-          setUser(normalUser);
-          localStorage.setItem('smartbazaar_user', JSON.stringify(normalUser));
-          resolve(normalUser);
-        } else {
-          reject(new Error('Invalid credentials'));
-        }
-      }, 800);
-    });
+    const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    if (error) throw new Error(error.message);
+    return data.user;
   };
 
   const register = async (name, email, password) => {
-    // Mock register logic
-    return new Promise((resolve) => {
-      setTimeout(() => {
-        resolve({ success: true, message: 'User registered' });
-      }, 800);
+    const { data, error } = await supabase.auth.signUp({
+      email,
+      password,
+      options: { data: { name } },
     });
+    if (error) throw new Error(error.message);
+    return data;
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('smartbazaar_user');
+  const logout = async () => {
+    await supabase.auth.signOut();
   };
 
-  const updateProfile = (data) => {
-    const updatedUser = { ...user, ...data };
-    setUser(updatedUser);
-    localStorage.setItem('smartbazaar_user', JSON.stringify(updatedUser));
+  const resetPassword = async (email) => {
+    const redirectTo = `${window.location.origin}/reset-password`;
+    const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
+    if (error) throw new Error(error.message);
+  };
+
+  const updatePassword = async (newPassword) => {
+    const { error } = await supabase.auth.updateUser({ password: newPassword });
+    if (error) throw new Error(error.message);
+  };
+
+  const updateProfile = async (data) => {
+    const { error } = await supabase.auth.updateUser({ data });
+    if (error) throw new Error(error.message);
+    setUser((prev) => ({ ...prev, user_metadata: { ...prev.user_metadata, ...data } }));
   };
 
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register, resetPassword, updatePassword, updateProfile }}>
       {children}
     </AuthContext.Provider>
   );

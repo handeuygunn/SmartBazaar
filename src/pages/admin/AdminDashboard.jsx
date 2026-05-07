@@ -1,11 +1,11 @@
-import React, { useState, useEffect, useContext } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { Shield, Edit2, Save, X, Search, AlertCircle, Plus, Trash2 } from 'lucide-react';
 import { fetchProducts, updateProduct, deleteProduct, createProduct } from '../../services/api';
-import { AuthContext } from '../../context/AuthContext';
+import { useAuth } from '../../hooks/useAuth';
 
 const AdminDashboard = () => {
-  const { user } = useContext(AuthContext);
+  const { user } = useAuth();
   const [products, setProducts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -23,35 +23,41 @@ const AdminDashboard = () => {
   const [error, setError] = useState('');
   const [success, setSuccess] = useState('');
 
-  useEffect(() => {
-    if (user && user.role === 'admin') {
-      loadProducts();
-    }
-  }, [user?.id]);
-
   const loadProducts = async () => {
     try {
       setLoading(true);
-      console.log('Loading products...');
       const data = await fetchProducts();
-      console.log('Products fetched:', data, 'Type:', typeof data, 'isArray:', Array.isArray(data));
-      
+
       if (!Array.isArray(data)) {
-        console.error('Data is not an array:', data);
         setError('Invalid data format received');
-        setLoading(false);
         return;
       }
-      
+
       setProducts(data || []);
-      console.log('Products set:', data.length);
     } catch (err) {
-      console.error('Error loading products:', err);
       setError('Failed to load products: ' + (err.message || 'Unknown error'));
     } finally {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (!user || user.role !== 'admin') return;
+
+    let active = true;
+    fetchProducts()
+      .then(data => {
+        if (!active) return;
+        if (Array.isArray(data)) setProducts(data);
+        else setError('Invalid data format received');
+      })
+      .catch(err => {
+        if (active) setError('Failed to load products: ' + (err.message || 'Unknown error'));
+      })
+      .finally(() => { if (active) setLoading(false); });
+
+    return () => { active = false; };
+  }, [user?.id]);
 
   const handleEditClick = (product) => {
     setEditingId(product.id);
@@ -196,7 +202,11 @@ const AdminDashboard = () => {
         </div>
         
         <div className="card-body p-0">
-          {/* TEST: Always show table для debug */}
+          {loading ? (
+            <div className="text-center py-5">
+              <div className="spinner-border text-primary" />
+            </div>
+          ) : (
           <div className="table-responsive">
               <table className="table table-hover align-middle m-0">
                 <thead className="table-light">
@@ -285,7 +295,7 @@ const AdminDashboard = () => {
                 </tbody>
               </table>
             </div>
-            {/* TEST: loading condition removed, table always shown */}
+          )}
         </div>
       </div>
 

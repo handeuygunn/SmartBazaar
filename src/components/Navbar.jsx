@@ -1,11 +1,11 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Search, LogOut, Shield } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { CartContext } from '../context/CartContext';
 
 const Navbar = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout } = useAuth();
   const { cartCount } = useContext(CartContext);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
