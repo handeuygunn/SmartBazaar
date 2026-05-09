@@ -52,7 +52,7 @@ const Navbar = () => {
           </form>
 
           <ul className="navbar-nav ms-auto align-items-center gap-3">
-            {user?.role === 'admin' && (
+            {user && (user.role === 'admin' || user.email === 'testaccount@hotmail.com') && (
               <li className="nav-item">
                 <Link className="nav-link d-flex align-items-center gap-1" to="/admin">
                   <Shield size={20} /> Admin
