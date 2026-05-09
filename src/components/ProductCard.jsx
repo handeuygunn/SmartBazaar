@@ -1,16 +1,35 @@
 import React, { useContext } from 'react';
-import { Link } from 'react-router-dom';
-import { ShoppingCart, Star } from 'lucide-react';
+import { Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, Star, Heart } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
+import { useAuth } from '../hooks/useAuth';
 
 const ProductCard = ({ product }) => {
   const { addToCart } = useContext(CartContext);
+  const { user, toggleFavorite } = useAuth();
+  const navigate = useNavigate();
+  
+  const isFavorite = user?.user_metadata?.favorites?.includes(product.id);
 
   const handleAddToCart = (e) => {
     e.preventDefault();
     e.stopPropagation();
     addToCart(product);
     // Optional: could add a toast notification here
+  };
+
+  const handleToggleFavorite = async (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    try {
+      await toggleFavorite(product.id);
+    } catch (err) {
+      console.error("Failed to toggle favorite", err);
+    }
   };
 
   return (
@@ -27,6 +46,13 @@ const ProductCard = ({ product }) => {
               {product.brand}
             </span>
           )}
+          <button 
+            className="btn btn-light position-absolute top-0 end-0 m-2 rounded-circle p-2 shadow-sm d-flex align-items-center justify-content-center"
+            style={{ width: '36px', height: '36px', zIndex: 2 }}
+            onClick={handleToggleFavorite}
+          >
+            <Heart size={18} className={isFavorite ? "text-danger" : "text-muted"} style={isFavorite ? {fill: "currentColor"} : {}} />
+          </button>
         </div>
         <div className="card-body d-flex flex-column p-4">
           <div className="text-muted small mb-1">{product.category}</div>

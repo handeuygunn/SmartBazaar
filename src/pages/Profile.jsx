@@ -3,13 +3,15 @@ import { Navigate } from 'react-router-dom';
 import {
   User as UserIcon, Package, Settings, LogOut, Trash2,
   ShoppingBag, Truck, CheckCircle, XCircle, Clock, Wifi, WifiOff,
-  Ban, RotateCcw, AlertTriangle,
+  Ban, RotateCcw, AlertTriangle, Heart
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import {
   fetchUserOrders, subscribeToOrderUpdates, getStatusMeta,
   cancelOrder, requestReturn,
 } from '../services/orderService';
+import { fetchProductsByIds } from '../services/api';
+import ProductCard from '../components/ProductCard';
 
 // ─── Reason Lists ──────────────────────────────────────────────────────────
 
@@ -34,16 +36,16 @@ const RETURN_REASONS = [
 // ─── Reason Modal ──────────────────────────────────────────────────────────
 
 const ReasonModal = ({ type, orderId, onSuccess, onClose }) => {
-  const [reason,     setReason]     = useState('');
+  const [reason, setReason] = useState('');
   const [submitting, setSubmitting] = useState(false);
-  const [error,      setError]      = useState('');
+  const [error, setError] = useState('');
 
-  const isCancel  = type === 'cancel';
-  const reasons   = isCancel ? CANCEL_REASONS : RETURN_REASONS;
-  const title     = isCancel ? 'Siparişi İptal Et' : 'İade Talebi Oluştur';
-  const btnLabel  = isCancel ? 'Siparişi İptal Et' : 'İade Talep Et';
-  const btnColor  = isCancel ? '#ef4444' : '#8b5cf6';
-  const Icon      = isCancel ? Ban : RotateCcw;
+  const isCancel = type === 'cancel';
+  const reasons = isCancel ? CANCEL_REASONS : RETURN_REASONS;
+  const title = isCancel ? 'Siparişi İptal Et' : 'İade Talebi Oluştur';
+  const btnLabel = isCancel ? 'Siparişi İptal Et' : 'İade Talep Et';
+  const btnColor = isCancel ? '#ef4444' : '#8b5cf6';
+  const Icon = isCancel ? Ban : RotateCcw;
 
   const handleSubmit = async () => {
     if (!reason) { setError('Lütfen bir neden seçin.'); return; }
@@ -176,9 +178,9 @@ const ReasonModal = ({ type, orderId, onSuccess, onClose }) => {
 // ─── Timeline Component ───────────────────────────────────────────────────────
 
 const TIMELINE_STEPS = [
-  { key: 'processing', label: 'Sipariş Alındı',  Icon: ShoppingBag },
-  { key: 'shipped',    label: 'Kargoya Verildi', Icon: Truck        },
-  { key: 'delivered',  label: 'Teslim Edildi',   Icon: CheckCircle  },
+  { key: 'processing', label: 'Sipariş Alındı', Icon: ShoppingBag },
+  { key: 'shipped', label: 'Kargoya Verildi', Icon: Truck },
+  { key: 'delivered', label: 'Teslim Edildi', Icon: CheckCircle },
 ];
 
 const StatusTimeline = ({ status }) => {
@@ -196,9 +198,9 @@ const StatusTimeline = ({ status }) => {
   return (
     <div className="d-flex align-items-center w-100 py-2">
       {TIMELINE_STEPS.map(({ key, label, Icon }, i) => {
-        const done    = i < activeIdx;
+        const done = i < activeIdx;
         const current = i === activeIdx;
-        const color   = done || current ? '#0d6efd' : '#cbd5e1';
+        const color = done || current ? '#0d6efd' : '#cbd5e1';
         const bgColor = done || current ? '#dbeafe' : '#f1f5f9';
         const textColor = done || current ? '#1d4ed8' : '#94a3b8';
 
@@ -267,10 +269,10 @@ const DeliveryInfo = ({ order }) => {
   const label = isDelivered
     ? `Teslim tarihi: ${date.toLocaleDateString('tr-TR')}`
     : daysLeft < 0
-    ? `Tahmini teslim: ${date.toLocaleDateString('tr-TR')} (gecikmiş olabilir)`
-    : daysLeft === 0
-    ? 'Bugün teslim edilmesi bekleniyor! 🎉'
-    : `Tahmini teslim: ${date.toLocaleDateString('tr-TR')} (~${daysLeft} gün)`;
+      ? `Tahmini teslim: ${date.toLocaleDateString('tr-TR')} (gecikmiş olabilir)`
+      : daysLeft === 0
+        ? 'Bugün teslim edilmesi bekleniyor! 🎉'
+        : `Tahmini teslim: ${date.toLocaleDateString('tr-TR')} (~${daysLeft} gün)`;
 
   const color = isDelivered ? '#10b981' : daysLeft <= 1 ? '#f59e0b' : '#6366f1';
 
@@ -285,132 +287,134 @@ const DeliveryInfo = ({ order }) => {
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
 const OrderCard = ({ order, isNew }) => {
-  const [expanded,      setExpanded]      = useState(false);
+  const [expanded, setExpanded] = useState(false);
   const [currentStatus, setCurrentStatus] = useState(order.order_status);
-  const [modal,         setModal]         = useState(null); // 'cancel' | 'return' | null
-  const meta    = getStatusMeta(currentStatus);
-  const items   = order.order_items || [];
-  const total   = items.reduce((s, i) => s + (i.price ?? 0) * (i.quantity ?? 1), 0);
-  const date    = order.order_purchase_timestamp
+  const [modal, setModal] = useState(null); // 'cancel' | 'return' | null
+  const meta = getStatusMeta(currentStatus);
+  const items = order.order_items || [];
+  const total = items.reduce((s, i) => s + (i.price ?? 0) * (i.quantity ?? 1), 0);
+  const date = order.order_purchase_timestamp
     ? new Date(order.order_purchase_timestamp).toLocaleDateString('tr-TR')
     : '—';
 
   return (
-    <div
-      className="card border-0 mb-3"
-      style={{
-        borderRadius: 16,
-        boxShadow: isNew
-          ? '0 0 0 2px #3b82f6, 0 4px 20px rgba(59,130,246,0.25)'
-          : '0 2px 12px rgba(0,0,0,0.08)',
-        transition: 'box-shadow 0.5s ease',
-        overflow: 'hidden',
-      }}
-    >
-      {/* Card Header */}
+    <>
       <div
-        className="card-header border-0 d-flex align-items-center justify-content-between flex-wrap gap-2"
-        style={{ background: '#f8fafc', padding: '14px 20px', cursor: 'pointer' }}
-        onClick={() => setExpanded(v => !v)}
+        className="card border-0 mb-3"
+        style={{
+          borderRadius: 16,
+          boxShadow: isNew
+            ? '0 0 0 2px #3b82f6, 0 4px 20px rgba(59,130,246,0.25)'
+            : '0 2px 12px rgba(0,0,0,0.08)',
+          transition: 'box-shadow 0.5s ease',
+          overflow: 'hidden',
+        }}
       >
-        <div>
-          <span className="text-muted me-2" style={{ fontSize: 12 }}>Sipariş #{order.order_id.slice(0, 8).toUpperCase()}</span>
-          <span className="text-muted" style={{ fontSize: 12 }}> · {date}</span>
-        </div>
-        <div className="d-flex align-items-center gap-2">
-          {items.length > 0 && (
-            <span className="text-muted" style={{ fontSize: 13 }}>
-              {items.length} ürün · <strong>${(total * 1.08).toFixed(2)}</strong>
-            </span>
-          )}
-          <span
-            className="badge"
-            style={{
-              backgroundColor: meta.bg,
-              color: meta.color,
-              border: `1px solid ${meta.color}40`,
-              fontWeight: 600,
-              fontSize: 11,
-              padding: '5px 10px',
-            }}
-          >
-            {meta.label}
-          </span>
-          <span className="text-muted" style={{ fontSize: 12 }}>{expanded ? '▲' : '▼'}</span>
-        </div>
-      </div>
-
-      {/* Timeline Section */}
-      <div className="px-4 pt-3 pb-1">
-        <StatusTimeline status={currentStatus} />
-        <DeliveryInfo order={{ ...order, order_status: currentStatus }} />
-      </div>
-
-      {/* Action Buttons */}
-      {(currentStatus === 'processing' || currentStatus === 'delivered') && (
-        <div className="px-4 pb-3 d-flex gap-2">
-          {currentStatus === 'processing' && (
-            <button
-              className="btn btn-sm d-flex align-items-center gap-2 fw-medium"
-              style={{
-                backgroundColor: '#fff1f2', color: '#ef4444',
-                border: '1.5px solid #fca5a5', borderRadius: 8, fontSize: 13,
-              }}
-              onClick={() => setModal('cancel')}
-            >
-              <Ban size={14} /> Siparişi İptal Et
-            </button>
-          )}
-          {currentStatus === 'delivered' && (
-            <button
-              className="btn btn-sm d-flex align-items-center gap-2 fw-medium"
-              style={{
-                backgroundColor: '#f5f3ff', color: '#7c3aed',
-                border: '1.5px solid #c4b5fd', borderRadius: 8, fontSize: 13,
-              }}
-              onClick={() => setModal('return')}
-            >
-              <RotateCcw size={14} /> İade Talep Et
-            </button>
-          )}
-        </div>
-      )}
-
-      {/* Expanded Details */}
-      {expanded && items.length > 0 && (
-        <div className="border-top mx-3 mb-3 pt-3">
-          <p className="text-muted mb-2" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-            Sipariş Kalemleri
-          </p>
-          {items.map((item, i) => (
-            <div key={i} className="d-flex justify-content-between align-items-center py-1" style={{ fontSize: 13 }}>
-              <span className="text-muted">#{item.order_item_id} — {item.product_id?.slice(0, 10) ?? '—'}...</span>
-              <span className="fw-medium">
-                {item.quantity > 1 ? `${item.quantity} × ` : ''} ${(item.price ?? 0).toFixed(2)}
+        {/* Card Header */}
+        <div
+          className="card-header border-0 d-flex align-items-center justify-content-between flex-wrap gap-2"
+          style={{ background: '#f8fafc', padding: '14px 20px', cursor: 'pointer' }}
+          onClick={() => setExpanded(v => !v)}
+        >
+          <div>
+            <span className="text-muted me-2" style={{ fontSize: 12 }}>Sipariş #{order.order_id.slice(0, 8).toUpperCase()}</span>
+            <span className="text-muted" style={{ fontSize: 12 }}> · {date}</span>
+          </div>
+          <div className="d-flex align-items-center gap-2">
+            {items.length > 0 && (
+              <span className="text-muted" style={{ fontSize: 13 }}>
+                {items.length} ürün · <strong>${(total * 1.08).toFixed(2)}</strong>
               </span>
-            </div>
-          ))}
-          <div className="d-flex justify-content-end pt-2 border-top mt-2">
-            <span className="fw-semibold" style={{ fontSize: 14 }}>
-              Toplam (vergi dahil): ${(total * 1.08).toFixed(2)}
+            )}
+            <span
+              className="badge"
+              style={{
+                backgroundColor: meta.bg,
+                color: meta.color,
+                border: `1px solid ${meta.color}40`,
+                fontWeight: 600,
+                fontSize: 11,
+                padding: '5px 10px',
+              }}
+            >
+              {meta.label}
             </span>
+            <span className="text-muted" style={{ fontSize: 12 }}>{expanded ? '▲' : '▼'}</span>
           </div>
         </div>
-      )}
-    </div>
 
-    {/* Reason Modal */}
-    {modal && (
-      <ReasonModal
-        type={modal}
-        orderId={order.order_id}
-        onSuccess={(newStatus) => {
-          setCurrentStatus(newStatus);
-          setModal(null);
-        }}
-        onClose={() => setModal(null)}
-      />
-    )}
+        {/* Timeline Section */}
+        <div className="px-4 pt-3 pb-1">
+          <StatusTimeline status={currentStatus} />
+          <DeliveryInfo order={{ ...order, order_status: currentStatus }} />
+        </div>
+
+        {/* Action Buttons */}
+        {(currentStatus === 'processing' || currentStatus === 'delivered') && (
+          <div className="px-4 pb-3 d-flex gap-2">
+            {currentStatus === 'processing' && (
+              <button
+                className="btn btn-sm d-flex align-items-center gap-2 fw-medium"
+                style={{
+                  backgroundColor: '#fff1f2', color: '#ef4444',
+                  border: '1.5px solid #fca5a5', borderRadius: 8, fontSize: 13,
+                }}
+                onClick={() => setModal('cancel')}
+              >
+                <Ban size={14} /> Siparişi İptal Et
+              </button>
+            )}
+            {currentStatus === 'delivered' && (
+              <button
+                className="btn btn-sm d-flex align-items-center gap-2 fw-medium"
+                style={{
+                  backgroundColor: '#f5f3ff', color: '#7c3aed',
+                  border: '1.5px solid #c4b5fd', borderRadius: 8, fontSize: 13,
+                }}
+                onClick={() => setModal('return')}
+              >
+                <RotateCcw size={14} /> İade Talep Et
+              </button>
+            )}
+          </div>
+        )}
+
+        {/* Expanded Details */}
+        {expanded && items.length > 0 && (
+          <div className="border-top mx-3 mb-3 pt-3">
+            <p className="text-muted mb-2" style={{ fontSize: 12, fontWeight: 600, textTransform: 'uppercase', letterSpacing: 0.5 }}>
+              Sipariş Kalemleri
+            </p>
+            {items.map((item, i) => (
+              <div key={i} className="d-flex justify-content-between align-items-center py-1" style={{ fontSize: 13 }}>
+                <span className="text-muted">#{item.order_item_id} — {item.product_id?.slice(0, 10) ?? '—'}...</span>
+                <span className="fw-medium">
+                  {item.quantity > 1 ? `${item.quantity} × ` : ''} ${(item.price ?? 0).toFixed(2)}
+                </span>
+              </div>
+            ))}
+            <div className="d-flex justify-content-end pt-2 border-top mt-2">
+              <span className="fw-semibold" style={{ fontSize: 14 }}>
+                Toplam (vergi dahil): ${(total * 1.08).toFixed(2)}
+              </span>
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* Reason Modal */}
+      {modal && (
+        <ReasonModal
+          type={modal}
+          orderId={order.order_id}
+          onSuccess={(newStatus) => {
+            setCurrentStatus(newStatus);
+            setModal(null);
+          }}
+          onClose={() => setModal(null)}
+        />
+      )}
+    </>
   );
 };
 
@@ -420,20 +424,44 @@ const Profile = () => {
   const { user, updateProfile, logout } = useAuth();
   const [activeTab, setActiveTab] = useState('profile');
   const [formData, setFormData] = useState({
-    name:  user?.user_metadata?.name  || '',
-    email: user?.email                || '',
+    name: user?.user_metadata?.name || '',
+    email: user?.email || '',
     phone: user?.user_metadata?.phone || '',
   });
-  const [message,    setMessage]    = useState('');
+  const [message, setMessage] = useState('');
   const [phoneError, setPhoneError] = useState('');
 
   // Orders state
-  const [orders,        setOrders]        = useState([]);
+  const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
-  const [ordersError,   setOrdersError]   = useState('');
-  const [realtimeOn,    setRealtimeOn]    = useState(false);
-  const [newOrderIds,   setNewOrderIds]   = useState(new Set()); // flash animation for updated cards
+  const [ordersError, setOrdersError] = useState('');
+  const [realtimeOn, setRealtimeOn] = useState(false);
+  const [newOrderIds, setNewOrderIds] = useState(new Set()); // flash animation for updated cards
   const unsubscribeRef = useRef(null);
+
+  const [favoriteProducts, setFavoriteProducts] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'favorites' || !user) return;
+    const loadFavorites = async () => {
+      setFavoritesLoading(true);
+      try {
+        const ids = user.user_metadata?.favorites || [];
+        if (ids.length > 0) {
+          const products = await fetchProductsByIds(ids);
+          setFavoriteProducts(products);
+        } else {
+          setFavoriteProducts([]);
+        }
+      } catch (err) {
+        console.error("Failed to fetch favorites", err);
+      } finally {
+        setFavoritesLoading(false);
+      }
+    };
+    loadFavorites();
+  }, [activeTab, user, user?.user_metadata?.favorites]);
 
   // Load orders when tab opened
   useEffect(() => {
@@ -540,7 +568,8 @@ const Profile = () => {
               <div className="list-group list-group-flush border-0">
                 {[
                   { key: 'profile', label: 'Hesap Ayarları', Icon: Settings },
-                  { key: 'orders',  label: 'Siparişlerim',   Icon: Package  },
+                  { key: 'orders', label: 'Siparişlerim', Icon: Package },
+                  { key: 'favorites', label: 'Favorilerim', Icon: Heart },
                 ].map(({ key, label, Icon }) => (
                   <button
                     key={key}
@@ -607,6 +636,33 @@ const Profile = () => {
                         <Trash2 size={18} /> Hesabı Sil
                       </button>
                     </div>
+                  </>
+                )}
+
+                {/* ── Favorites ── */}
+                {activeTab === 'favorites' && (
+                  <>
+                    <h4 className="fw-bold mb-4">Favorilerim</h4>
+                    {favoritesLoading ? (
+                      <div className="text-center py-5">
+                        <div className="spinner-border text-primary" />
+                        <p className="text-muted mt-3 small">Favoriler yükleniyor...</p>
+                      </div>
+                    ) : favoriteProducts.length === 0 ? (
+                      <div className="text-center py-5 text-muted">
+                        <Heart size={56} className="mb-3 opacity-50" />
+                        <h5>Henüz favori ürününüz yok</h5>
+                        <p className="small">İlginizi çeken ürünleri favorilerinize ekleyerek daha sonra kolayca bulabilirsiniz.</p>
+                      </div>
+                    ) : (
+                      <div className="row row-cols-1 row-cols-sm-2 row-cols-md-3 g-4">
+                        {favoriteProducts.map(product => (
+                          <div className="col" key={product.id}>
+                            <ProductCard product={product} />
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
 
