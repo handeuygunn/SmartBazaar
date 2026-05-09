@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(npm install *)",
+      "Bash(sed -i \"s|import { useAuth } from '../context/AuthContext';|import { useAuth } from '../hooks/useAuth';|g\" src/pages/ResetPassword.jsx src/pages/ForgotPassword.jsx src/pages/Login.jsx src/pages/Register.jsx src/pages/Profile.jsx src/pages/Cart.jsx)",
+      "Bash(sed -i \"s|import { useAuth } from '../../context/AuthContext';|import { useAuth } from '../../hooks/useAuth';|g\" src/pages/admin/AdminDashboard.jsx)",
+      "Bash(sed -i \"s|import { useAuth } from '../context/AuthContext';|import { useAuth } from '../hooks/useAuth';|g\" src/components/Navbar.jsx)"
+    ]
+  }
+}

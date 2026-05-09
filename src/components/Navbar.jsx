@@ -1,11 +1,11 @@
 import React, { useContext, useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { ShoppingCart, User, Search, LogOut, Shield } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 import { CartContext } from '../context/CartContext';
 
 const Navbar = () => {
-  const { user, logout } = useContext(AuthContext);
+  const { user, logout } = useAuth();
   const { cartCount } = useContext(CartContext);
   const navigate = useNavigate();
   const [searchQuery, setSearchQuery] = useState('');
@@ -75,7 +75,7 @@ const Navbar = () => {
               <li className="nav-item dropdown">
                 <button className="btn btn-link nav-link dropdown-toggle d-flex align-items-center gap-2 text-decoration-none" id="userDropdown" data-bs-toggle="dropdown">
                   <User size={22} /> 
-                  <span className="d-none d-lg-inline">{user.name.split(' ')[0]}</span>
+                  <span className="d-none d-lg-inline">{(user.user_metadata?.name || user.email || '').split(' ')[0]}</span>
                 </button>
                 <ul className="dropdown-menu dropdown-menu-end shadow border-0" aria-labelledby="userDropdown">
                   <li><Link className="dropdown-item py-2" to="/profile">My Profile</Link></li>

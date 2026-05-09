@@ -1,14 +1,14 @@
-import React, { useState, useContext } from 'react';
+import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { Lock, Mail } from 'lucide-react';
-import { AuthContext } from '../context/AuthContext';
+import { useAuth } from '../hooks/useAuth';
 
 const Login = () => {
-  const [email, setEmail] = useState('admin@smartbazaar.com');
-  const [password, setPassword] = useState('admin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
-  const { login } = useContext(AuthContext);
+  const { login } = useAuth();
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -34,10 +34,15 @@ const Login = () => {
             <div className="text-center mb-5">
               <h2 className="fw-bold mb-2">Welcome Back</h2>
               <p className="text-muted">Enter your credentials to access your account.</p>
-              <div className="bg-light p-3 rounded mt-3 text-start small">
-                <span className="fw-bold d-block text-primary">Test Accounts:</span>
-                <div>Admin: <code>admin@smartbazaar.com</code> / <code>admin</code></div>
-                <div>User: <code>user@example.com</code> / <code>any password</code></div>
+              <div
+                className="bg-light p-3 rounded mt-3 text-start small"
+                style={{ cursor: 'pointer' }}
+                onClick={() => { setEmail('testaccount@hotmail.com'); setPassword('123456'); }}
+                title="Click to autofill"
+              >
+                <span className="fw-bold d-block text-primary mb-1">Test Account <span className="text-muted fw-normal">(click to fill)</span></span>
+                <div>Email: <code>testaccount@hotmail.com</code></div>
+                <div>Password: <code>123456</code></div>
               </div>
             </div>
 
@@ -64,7 +69,7 @@ const Login = () => {
               <div className="mb-4">
                 <div className="d-flex justify-content-between align-items-center mb-1">
                   <label className="form-label fw-medium small m-0">Password</label>
-                  <a href="#" className="small text-decoration-none text-primary">Forgot Password?</a>
+                  <Link to="/forgot-password" className="small text-decoration-none text-primary">Forgot Password?</Link>
                 </div>
                 <div className="input-group">
                   <span className="input-group-text bg-transparent border-end-0 text-muted">
