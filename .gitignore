@@ -23,6 +23,7 @@ dist-ssr
 *.sln
 *.sw?
 .env
+Chatbot/.env
 
 # Python
 .venv

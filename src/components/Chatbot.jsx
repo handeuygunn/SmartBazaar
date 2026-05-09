@@ -1,91 +1,240 @@
-import React, { useState } from 'react';
+import React, { useState, useRef, useEffect } from 'react';
 import axios from 'axios';
-import { MessageCircle, X, Loader2 } from 'lucide-react';
-import './Chatbot.css'; // Assuming we'll add styles here
+import { MessageCircle, X, Loader2, Send, ShoppingBag, HelpCircle } from 'lucide-react';
+import './Chatbot.css';
 
-const Chatbot = () => {
+const API_BASE = 'http://localhost:5001';
+
+// Render bold **text** and bullet lines
+const renderMarkdown = (text) => {
+  return text.split('\n').map((line, i) => {
+    const parts = line.split(/\*\*(.*?)\*\*/g);
+    return (
+      <p key={i} className="chat-line">
+        {parts.map((part, j) =>
+          j % 2 === 1 ? <strong key={j}>{part}</strong> : part
+        )}
+      </p>
+    );
+  });
+};
+
+const QUICK_CHIPS = [
+  { label: '🚚 Kargo süresi', message: 'Kargom ne zaman gelir?' },
+  { label: '↩️ İade koşulları', message: 'Ürünü iade etmek istiyorum' },
+  { label: '💳 Ödeme yöntemleri', message: 'Hangi ödeme yöntemlerini kabul ediyorsunuz?' },
+  { label: '💡 Ürün önerisi', message: '__recommend__' },
+];
+
+const WELCOME_MSG = {
+  sender: 'bot',
+  text:
+    '👋 Merhaba! Ben SmartBazaar Destek Asistanıyım.\n\n' +
+    'Kargo, iade ve ödeme konularındaki sorularınızı yanıtlayabilirim, ' +
+    'ya da size özel ürün önerileri sunabilirim.\n\n' +
+    'Aşağıdaki hızlı seçeneklerden birini kullanın veya sorunuzu yazın!',
+  intent: 'welcome',
+};
+
+export default function Chatbot() {
   const [isOpen, setIsOpen] = useState(false);
-  const [messages, setMessages] = useState([
-    { sender: 'bot', text: 'Merhaba! Ben SmartBazaar Yapay Zeka botuyum. Sana özel ürün tavsiyeleri istersen, aşağıdaki butona tıklayarak güncel önerileri alabilirsin!' }
-  ]);
+  const [messages, setMessages] = useState([WELCOME_MSG]);
+  const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [activeMode, setActiveMode] = useState('faq'); // 'faq' | 'recommend'
+  const bottomRef = useRef(null);
+  const inputRef = useRef(null);
 
-  const toggleChat = () => setIsOpen(!isOpen);
+  useEffect(() => {
+    if (isOpen) {
+      bottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+      inputRef.current?.focus();
+    }
+  }, [messages, isOpen]);
 
-  const fetchRecommendations = async () => {
+  const addMessage = (sender, text, intent = null) =>
+    setMessages((prev) => [...prev, { sender, text, intent }]);
+
+  const sendFaq = async (userText) => {
+    addMessage('user', userText);
     setLoading(true);
-    // Add user message
-    setMessages(prev => [...prev, { sender: 'user', text: 'Bana ürün önerir misin?' }]);
-    
     try {
-      const response = await axios.get('http://localhost:5001/api/chat/recommend');
-      if (response.data && response.data.response) {
-        setMessages(prev => [...prev, { sender: 'bot', text: response.data.response }]);
-      } else {
-        setMessages(prev => [...prev, { sender: 'bot', text: 'Şu an öneri sistemine bağlanamıyorum. Lütfen daha sonra tekrar dene.' }]);
-      }
-    } catch (error) {
-      console.error("Chatbot error:", error);
-      let errorMsg = 'Üzgünüm, şu an isteğini yerine getiremiyorum. Daha sonra tekrar deneyebilirsin.';
-      if (error.response && error.response.data && error.response.data.error) {
-         errorMsg = `Hata: ${error.response.data.error}`;
-      }
-      setMessages(prev => [...prev, { sender: 'bot', text: errorMsg }]);
+      const res = await axios.post(`${API_BASE}/api/chat/faq`, { message: userText });
+      addMessage('bot', res.data.response, res.data.intent);
+    } catch (err) {
+      const msg =
+        err.response?.data?.error ||
+        'Şu an yanıt veremiyorum. Lütfen daha sonra tekrar dene.';
+      addMessage('bot', msg, 'error');
     }
     setLoading(false);
+  };
+
+  const sendRecommend = async () => {
+    addMessage('user', 'Bana ürün önerisi yap 💡');
+    setLoading(true);
+    try {
+      const res = await axios.get(`${API_BASE}/api/chat/recommend`);
+      addMessage('bot', res.data.response || 'Öneri alınamadı.', 'recommend');
+    } catch (err) {
+      addMessage('bot', 'Öneri sistemi şu an meşgul. Lütfen tekrar dene.', 'error');
+    }
+    setLoading(false);
+  };
+
+  const handleChip = (chip) => {
+    if (loading) return;
+    if (chip.message === '__recommend__') {
+      sendRecommend();
+    } else {
+      sendFaq(chip.message);
+    }
+  };
+
+  const handleSubmit = (e) => {
+    e.preventDefault();
+    const text = input.trim();
+    if (!text || loading) return;
+    setInput('');
+    sendFaq(text);
+  };
+
+  const intentBadge = (intent) => {
+    const map = {
+      shipping: { label: 'Kargo', color: '#3b82f6' },
+      returns: { label: 'İade', color: '#f59e0b' },
+      payment: { label: 'Ödeme', color: '#10b981' },
+      recommend: { label: 'Öneri', color: '#8b5cf6' },
+      greeting: null,
+      welcome: null,
+      unknown: { label: 'Destek', color: '#ef4444' },
+      ai_assisted: { label: 'AI', color: '#6366f1' },
+    };
+    if (!intent || !map[intent]) return null;
+    const b = map[intent];
+    return (
+      <span className="intent-badge" style={{ background: b.color }}>
+        {b.label}
+      </span>
+    );
   };
 
   return (
     <div className="chatbot-container">
       {isOpen ? (
-        <div className="chatbot-window card shadow-lg border-0">
-          <div className="card-header bg-primary text-white d-flex justify-content-between align-items-center">
-            <h5 className="mb-0 fs-6 d-flex align-items-center">
-              <MessageCircle size={18} className="me-2" />
-              Yapay Zeka Satış Asistanı
-            </h5>
-            <button className="btn-close btn-close-white" onClick={toggleChat}></button>
+        <div className="chatbot-window">
+          {/* Header */}
+          <div className="chatbot-header">
+            <div className="chatbot-header-left">
+              <div className="chatbot-avatar">
+                <MessageCircle size={18} />
+              </div>
+              <div>
+                <div className="chatbot-title">SmartBazaar Asistan</div>
+                <div className="chatbot-status">
+                  <span className="status-dot" />
+                  Çevrimiçi
+                </div>
+              </div>
+            </div>
+            <button className="chatbot-close" onClick={() => setIsOpen(false)} aria-label="Kapat">
+              <X size={18} />
+            </button>
           </div>
-          
-          <div className="card-body chatbot-messages p-3" style={{ height: '350px', overflowY: 'auto' }}>
+
+          {/* Mode tabs */}
+          <div className="chatbot-tabs">
+            <button
+              className={`chatbot-tab ${activeMode === 'faq' ? 'active' : ''}`}
+              onClick={() => setActiveMode('faq')}
+            >
+              <HelpCircle size={14} /> Destek & SSS
+            </button>
+            <button
+              className={`chatbot-tab ${activeMode === 'recommend' ? 'active' : ''}`}
+              onClick={() => { setActiveMode('recommend'); if (!loading) sendRecommend(); }}
+            >
+              <ShoppingBag size={14} /> Ürün Önerisi
+            </button>
+          </div>
+
+          {/* Messages */}
+          <div className="chatbot-messages" id="chatbot-messages-area">
             {messages.map((msg, idx) => (
-              <div key={idx} className={`d-flex mb-3 ${msg.sender === 'user' ? 'justify-content-end' : 'justify-content-start'}`}>
-                <div className={`p-3 rounded-4 ${msg.sender === 'user' ? 'bg-primary text-white' : 'bg-light text-dark'}`} style={{ maxWidth: '85%', whiteSpace: 'pre-line', fontSize: '0.9rem' }}>
-                  {msg.text}
+              <div
+                key={idx}
+                className={`chat-bubble-row ${msg.sender === 'user' ? 'user' : 'bot'}`}
+              >
+                {msg.sender === 'bot' && (
+                  <div className="bot-avatar-small">🤖</div>
+                )}
+                <div className={`chat-bubble ${msg.sender}`}>
+                  {intentBadge(msg.intent)}
+                  <div className="chat-text">{renderMarkdown(msg.text)}</div>
                 </div>
               </div>
             ))}
+
             {loading && (
-              <div className="d-flex justify-content-start mb-3">
-                <div className="bg-light text-dark p-3 rounded-4 d-flex align-items-center">
-                  <Loader2 className="spinner-border spinner-border-sm me-2 text-primary" size={16} /> Satış asistanı düşünüyor...
+              <div className="chat-bubble-row bot">
+                <div className="bot-avatar-small">🤖</div>
+                <div className="chat-bubble bot typing">
+                  <span /><span /><span />
                 </div>
               </div>
             )}
+            <div ref={bottomRef} />
           </div>
-          
-          <div className="card-footer bg-white border-top-0 p-3">
-            <button 
-              className="btn btn-primary w-100 fw-bold d-flex align-items-center justify-content-center" 
-              onClick={fetchRecommendations} 
+
+          {/* Quick chips */}
+          <div className="chatbot-chips">
+            {QUICK_CHIPS.map((chip) => (
+              <button
+                key={chip.label}
+                className="chip"
+                onClick={() => handleChip(chip)}
+                disabled={loading}
+              >
+                {chip.label}
+              </button>
+            ))}
+          </div>
+
+          {/* Input */}
+          <form className="chatbot-input-area" onSubmit={handleSubmit}>
+            <input
+              ref={inputRef}
+              id="chatbot-input"
+              className="chatbot-input"
+              type="text"
+              placeholder="Sorunuzu yazın…"
+              value={input}
+              onChange={(e) => setInput(e.target.value)}
               disabled={loading}
-              style={{ borderRadius: '25px' }}
+              autoComplete="off"
+            />
+            <button
+              id="chatbot-send-btn"
+              type="submit"
+              className="chatbot-send"
+              disabled={loading || !input.trim()}
+              aria-label="Gönder"
             >
-              {loading ? 'Öneriler Hesaplanıyor...' : '💡 Akıllı Ürün Önerisi Al'}
+              {loading ? <Loader2 size={18} className="spin" /> : <Send size={18} />}
             </button>
-          </div>
+          </form>
         </div>
       ) : (
-        <button 
-          onClick={toggleChat} 
-          className="btn btn-primary rounded-circle shadow-lg chatbot-toggle-btn d-flex align-items-center justify-content-center"
-          aria-label="Satış Asistanı"
+        <button
+          id="chatbot-toggle-btn"
+          className="chatbot-toggle"
+          onClick={() => setIsOpen(true)}
+          aria-label="Destek Asistanını Aç"
         >
           <MessageCircle size={28} />
+          <span className="chatbot-toggle-badge">?</span>
         </button>
       )}
     </div>
   );
-};
-
-export default Chatbot;
+}

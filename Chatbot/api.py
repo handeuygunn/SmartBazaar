@@ -1,4 +1,9 @@
 import os
+try:
+    from dotenv import load_dotenv
+    load_dotenv()  # loads Chatbot/.env when running locally
+except ImportError:
+    pass  # dotenv optional; env vars can be set another way
 from flask import Flask, jsonify, request
 from flask_cors import CORS
 from functools import wraps
@@ -31,8 +36,8 @@ def require_admin(f):
         return jsonify({"error": "Admin authorization required"}), 403
     return decorated_function
 
-SUPABASE_URL = "https://vxlndiazdhncofqavnyh.supabase.co"
-SUPABASE_KEY = "sb_secret_8nGLbGX2ak0SlRkAiRJTnQ_YYuuKT7M"
+SUPABASE_URL = os.getenv("SUPABASE_URL", "")
+SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")
 
 # CSV'den yükle, yoksa Supabase'den çek
 def load_review_data():
@@ -326,8 +331,9 @@ def recommend():
         ai_context += "---\n"
         
     try:
-        # API KEY SURESI DOLU DEĞİŞTİRİLMELİ
-        GEMINI_API_KEY = "AQ.Ab8RN6K0ZWC5vgEvMftPkBfUjoEI9V6lIJi7ul23VAqsUK-yiA" 
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+        if not GEMINI_API_KEY:
+            raise ValueError("GEMINI_API_KEY is not set")
         
         client = genai.Client(api_key=GEMINI_API_KEY)
         response = client.models.generate_content(
@@ -341,5 +347,192 @@ def recommend():
             return jsonify({"response": "Şu an Gemini yapay zeka servisi çok yoğun, lütfen birkaç saniye sonra tekrar dene. Ürün önerilerimiz hazır bekliyor!"}), 200
         return jsonify({"error": error_str}), 500
 
+
+# ─────────────────────────────────────────────
+#  FAQ INTENT ENGINE  (NLP – keyword clustering)
+# ─────────────────────────────────────────────
+
+FAQ_INTENTS = {
+    "shipping": {
+        "keywords": [
+            "kargo", "teslimat", "gönder", "ne zaman gelir", "ne zaman gelecek",
+            "kaç günde", "ulaşır", "ulaşmaz", "takip", "tracking", "shipping",
+            "delivery", "shipped", "dispatch", "kurye", "dağıtım", "gelmedi",
+            "nerede kaldı", "yolda", "taşıma"
+        ],
+        "answer": (
+            "🚚 **Kargo & Teslimat Bilgisi**\n\n"
+            "• Siparişler onaylandıktan sonra **1-2 iş günü** içinde kargoya verilir.\n"
+            "• Standart teslimat süresi **3-5 iş günü**dür (şehre göre değişebilir).\n"
+            "• Ekspres kargo seçeneğiyle **1-2 iş günü**nde teslim alabilirsiniz.\n"
+            "• Kargo takip numaranız sipariş onay e-postanıza gönderilir.\n"
+            "• 150 TL üzeri alışverişlerde **ücretsiz kargo** uygulanır.\n\n"
+            "📦 Siparişinizi Profilim > Siparişlerim bölümünden canlı olarak takip edebilirsiniz."
+        )
+    },
+    "returns": {
+        "keywords": [
+            "iade", "geri gönder", "değişim", "değiştirmek", "değiştir", "beğenmedim",
+            "return", "refund", "exchange", "iade etmek", "para iadesi", "iptal",
+            "iptal etmek", "iptal etmek istiyorum", "wrong item", "yanlış ürün",
+            "hasarlı", "bozuk", "kırık", "çalışmıyor", "kusurlu", "defolu"
+        ],
+        "answer": (
+            "↩️ **İade & Değişim Politikası**\n\n"
+            "• Teslim tarihinden itibaren **14 gün** içinde iade talep edebilirsiniz.\n"
+            "• Ürün orijinal ambalajında, kullanılmamış ve fatura ile birlikte olmalıdır.\n"
+            "• İade onaylandıktan sonra **3-5 iş günü** içinde ödemeniz iade edilir.\n"
+            "• Hasarlı veya yanlış ürün geldiğinde kargo ücreti tarafımızca karşılanır.\n"
+            "• Dijital ürünler ve indirimli kampanya ürünleri iade kapsamı dışındadır.\n\n"
+            "📋 İade talebinizi Profilim > Siparişlerim > İade Talebi bölümünden açabilirsiniz."
+        )
+    },
+    "payment": {
+        "keywords": [
+            "ödeme", "kredi kartı", "banka kartı", "havale", "eft", "kapıda ödeme",
+            "payment", "pay", "credit card", "debit", "taksit", "taksitli", "fatura",
+            "nakit", "cash", "paypal", "apple pay", "google pay", "güvenli", "ssl",
+            "3d secure", "çalınma", "dolandırıcılık", "güvenlik", "şifre"
+        ],
+        "answer": (
+            "💳 **Ödeme Yöntemleri & Güvenlik**\n\n"
+            "• Kredi kartı (Visa, Mastercard, AmEx) — tüm bankalar\n"
+            "• Banka kartı (debit)\n"
+            "• Havale / EFT\n"
+            "• Kapıda Ödeme (nakit veya pos cihazı)\n\n"
+            "🔒 **Güvenlik:** Tüm işlemler **256-bit SSL** şifreleme ve **3D Secure** ile korunmaktadır. Kart bilgileriniz sistemimizde saklanmaz.\n\n"
+            "💰 **Taksit:** Anlaşmalı bankalarda 3, 6 ve 12 taksit imkânı mevcuttur. Taksit seçeneklerini ödeme adımında görebilirsiniz."
+        )
+    }
+}
+
+GREETING_KEYWORDS = ["merhaba", "selam", "hi", "hello", "iyi günler", "günaydın", "hey"]
+
+GREETING_ANSWER = (
+    "👋 Merhaba! Ben SmartBazaar Destek Asistanıyım.\n\n"
+    "Size şu konularda yardımcı olabilirim:\n"
+    "• 🚚 **Kargo & Teslimat** — Kargo süreleri, takip\n"
+    "• ↩️ **İade & Değişim** — İade koşulları, para iadesi\n"
+    "• 💳 **Ödeme** — Yöntemler, güvenlik, taksit\n"
+    "• 💡 **Ürün Önerisi** — Kişiselleştirilmiş öneriler\n\n"
+    "Sorunuzu yazabilirsiniz!"
+)
+
+CONTACT_SUPPORT_ANSWER = (
+    "🤔 Bu konuda size daha iyi yardımcı olabilmek için destek ekibimize bağlayalım.\n\n"
+    "📞 **Müşteri Destek Hattı:** 0850 xxx xx xx (09:00–21:00)\n"
+    "📧 **E-posta:** destek@smartbazaar.com\n"
+    "💬 **Canlı Destek:** Web sitemizin sağ alt köşesindeki 'Canlı Destek' butonunu kullanabilirsiniz.\n\n"
+    "Ortalama yanıt süresi **30 dakika**dır. Size en kısa sürede dönüş yapacağız! 🙏"
+)
+
+
+def detect_intent(message: str):
+    """
+    Lightweight NLP intent detection:
+    1. Normalise & tokenise
+    2. Keyword matching with partial / substring support
+    3. Returns matched intent key or None
+    """
+    msg = message.lower().strip()
+    # remove common punctuation
+    for ch in "?!.,;:\"'()[]{}":
+        msg = msg.replace(ch, " ")
+
+    # greeting check
+    for kw in GREETING_KEYWORDS:
+        if kw in msg:
+            return "greeting"
+
+    # score each intent
+    scores = {}
+    for intent, data in FAQ_INTENTS.items():
+        score = 0
+        for kw in data["keywords"]:
+            if kw in msg:
+                score += len(kw.split())   # longer phrase = higher weight
+        if score > 0:
+            scores[intent] = score
+
+    if not scores:
+        return None
+    return max(scores, key=scores.get)
+
+
+def gemini_faq_answer(user_message: str, detected_intent: str | None) -> str | None:
+    """
+    Optional: use Gemini to enrich the answer or handle edge cases.
+    Returns None if Gemini is unavailable.
+    """
+    try:
+        GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+        if not GEMINI_API_KEY:
+            return None
+        client = genai.Client(api_key=GEMINI_API_KEY)
+
+        context_hint = ""
+        if detected_intent and detected_intent in FAQ_INTENTS:
+            context_hint = f"Bu soru büyük olasılıkla '{detected_intent}' konusuyla ilgilidir. "
+
+        system_prompt = (
+            "Sen SmartBazaar e-ticaret platformunun Türkçe konuşan müşteri destek asistanısın. "
+            "Sadece şu konularda yardımcı olabilirsin: kargo/teslimat, iade/değişim, ödeme yöntemleri. "
+            "Bu konular dışındaki sorular için müşteriyi destek hattına yönlendir. "
+            "Yanıtların kısa, net ve samimi olsun. Emoji kullanabilirsin. "
+            f"{context_hint}"
+            "Kullanıcı sorusu: " + user_message
+        )
+
+        response = client.models.generate_content(
+            model='gemini-2.5-flash',
+            contents=system_prompt
+        )
+        return response.text
+    except Exception:
+        return None
+
+
+@app.route('/api/chat/faq', methods=['POST'])
+def faq_chat():
+    """
+    NLP-powered FAQ endpoint.
+    Body: { "message": "..." }
+    Returns: { "response": "...", "intent": "..." }
+    """
+    data = request.get_json(silent=True) or {}
+    user_message = (data.get("message") or "").strip()
+
+    if not user_message:
+        return jsonify({"error": "message field is required"}), 400
+
+    intent = detect_intent(user_message)
+
+    # 1. Greeting
+    if intent == "greeting":
+        return jsonify({"response": GREETING_ANSWER, "intent": "greeting"}), 200
+
+    # 2. Known FAQ intent → return pre-built structured answer
+    if intent and intent in FAQ_INTENTS:
+        base_answer = FAQ_INTENTS[intent]["answer"]
+
+        # Optionally enrich with Gemini if the question is complex
+        words = user_message.split()
+        if len(words) > 6:   # complex question — try Gemini enrichment
+            gemini_resp = gemini_faq_answer(user_message, intent)
+            if gemini_resp:
+                return jsonify({"response": gemini_resp, "intent": intent}), 200
+
+        return jsonify({"response": base_answer, "intent": intent}), 200
+
+    # 3. Unknown intent → try Gemini
+    gemini_resp = gemini_faq_answer(user_message, None)
+    if gemini_resp:
+        return jsonify({"response": gemini_resp, "intent": "ai_assisted"}), 200
+
+    # 4. Final fallback → Contact Support
+    return jsonify({"response": CONTACT_SUPPORT_ANSWER, "intent": "unknown"}), 200
+
+
 if __name__ == '__main__':
     app.run(port=5001)
+
