@@ -3,9 +3,175 @@ import { Navigate } from 'react-router-dom';
 import {
   User as UserIcon, Package, Settings, LogOut, Trash2,
   ShoppingBag, Truck, CheckCircle, XCircle, Clock, Wifi, WifiOff,
+  Ban, RotateCcw, AlertTriangle,
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
-import { fetchUserOrders, subscribeToOrderUpdates, getStatusMeta } from '../services/orderService';
+import {
+  fetchUserOrders, subscribeToOrderUpdates, getStatusMeta,
+  cancelOrder, requestReturn,
+} from '../services/orderService';
+
+// ─── Reason Lists ──────────────────────────────────────────────────────────
+
+const CANCEL_REASONS = [
+  'Fikrim değişti',
+  'Yanlış ürün sipariş ettim',
+  'Daha ucuz alternatif buldum',
+  'Teslimat süresi çok uzun',
+  'Siparişi çift verdim',
+  'Diğer',
+];
+
+const RETURN_REASONS = [
+  'Ürün hasarı geldi',
+  'Yanlış ürün geldi',
+  'Ürün açıklamaya uymuyor',
+  'Kalite beklentimi karşılamadı',
+  'Ürünü beğenmedim',
+  'Diğer',
+];
+
+// ─── Reason Modal ──────────────────────────────────────────────────────────
+
+const ReasonModal = ({ type, orderId, onSuccess, onClose }) => {
+  const [reason,     setReason]     = useState('');
+  const [submitting, setSubmitting] = useState(false);
+  const [error,      setError]      = useState('');
+
+  const isCancel  = type === 'cancel';
+  const reasons   = isCancel ? CANCEL_REASONS : RETURN_REASONS;
+  const title     = isCancel ? 'Siparişi İptal Et' : 'İade Talebi Oluştur';
+  const btnLabel  = isCancel ? 'Siparişi İptal Et' : 'İade Talep Et';
+  const btnColor  = isCancel ? '#ef4444' : '#8b5cf6';
+  const Icon      = isCancel ? Ban : RotateCcw;
+
+  const handleSubmit = async () => {
+    if (!reason) { setError('Lütfen bir neden seçin.'); return; }
+    setSubmitting(true);
+    setError('');
+    try {
+      if (isCancel) {
+        await cancelOrder(orderId, reason);
+      } else {
+        await requestReturn(orderId, reason);
+      }
+      onSuccess(isCancel ? 'cancelled' : 'return_requested');
+    } catch (err) {
+      setError(err.message || 'Bir hata oluştu. Lütfen tekrar deneyin.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div
+      className="modal fade show d-block"
+      style={{ backgroundColor: 'rgba(0,0,0,0.55)' }}
+      onClick={(e) => { if (e.target === e.currentTarget) onClose(); }}
+    >
+      <div className="modal-dialog modal-dialog-centered" style={{ maxWidth: 460 }}>
+        <div className="modal-content border-0" style={{ borderRadius: 16, overflow: 'hidden' }}>
+
+          {/* Header */}
+          <div className="modal-header border-0 pb-0 pt-4 px-4">
+            <div className="d-flex align-items-center gap-3">
+              <div
+                className="d-flex align-items-center justify-content-center rounded-circle"
+                style={{ width: 44, height: 44, backgroundColor: isCancel ? '#fee2e2' : '#ede9fe' }}
+              >
+                <Icon size={20} style={{ color: btnColor }} />
+              </div>
+              <div>
+                <h5 className="fw-bold mb-0">{title}</h5>
+                <p className="text-muted mb-0" style={{ fontSize: 13 }}>
+                  #{orderId.slice(0, 8).toUpperCase()}
+                </p>
+              </div>
+            </div>
+            <button type="button" className="btn-close" onClick={onClose} />
+          </div>
+
+          {/* Body */}
+          <div className="modal-body px-4 pt-3 pb-4">
+            {error && (
+              <div className="alert d-flex align-items-center gap-2 py-2 mb-3"
+                style={{ backgroundColor: '#fff1f2', border: '1px solid #fecdd3', borderRadius: 10, color: '#be123c', fontSize: 13 }}>
+                <AlertTriangle size={15} /> {error}
+              </div>
+            )}
+
+            <label className="form-label fw-semibold" style={{ fontSize: 14 }}>
+              {isCancel ? 'Neden iptal etmek istiyorsunuz?' : 'İade nedeniniz nedir?'}
+              <span className="text-danger ms-1">*</span>
+            </label>
+
+            <div className="d-flex flex-column gap-2">
+              {reasons.map((r) => (
+                <label
+                  key={r}
+                  className="d-flex align-items-center gap-3 p-3 rounded-3"
+                  style={{
+                    cursor: 'pointer',
+                    border: `2px solid ${reason === r ? btnColor : '#e2e8f0'}`,
+                    backgroundColor: reason === r ? (isCancel ? '#fff1f2' : '#f5f3ff') : '#f8fafc',
+                    transition: 'all 0.15s',
+                    fontSize: 14,
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="reason"
+                    value={r}
+                    checked={reason === r}
+                    onChange={() => { setReason(r); setError(''); }}
+                    className="d-none"
+                  />
+                  <span
+                    className="rounded-circle flex-shrink-0 d-flex align-items-center justify-content-center"
+                    style={{
+                      width: 20, height: 20,
+                      border: `2px solid ${reason === r ? btnColor : '#cbd5e1'}`,
+                      backgroundColor: reason === r ? btnColor : 'transparent',
+                      transition: 'all 0.15s',
+                    }}
+                  >
+                    {reason === r && <span style={{ width: 6, height: 6, borderRadius: '50%', backgroundColor: '#fff', display: 'block' }} />}
+                  </span>
+                  {r}
+                </label>
+              ))}
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="modal-footer border-0 pt-0 px-4 pb-4 d-flex gap-2">
+            <button
+              type="button"
+              className="btn btn-light border flex-grow-1 fw-medium"
+              onClick={onClose}
+              disabled={submitting}
+            >
+              Vazgeç
+            </button>
+            <button
+              type="button"
+              className="btn flex-grow-1 fw-medium text-white"
+              style={{ backgroundColor: btnColor, border: 'none', opacity: submitting ? 0.75 : 1 }}
+              onClick={handleSubmit}
+              disabled={submitting}
+            >
+              {submitting
+                ? <><span className="spinner-border spinner-border-sm me-2" />İşleniyor...</>
+                : <><Icon size={15} className="me-2" />{btnLabel}</>
+              }
+            </button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+  );
+};
 
 // ─── Timeline Component ───────────────────────────────────────────────────────
 
@@ -119,8 +285,10 @@ const DeliveryInfo = ({ order }) => {
 // ─── Order Card ───────────────────────────────────────────────────────────────
 
 const OrderCard = ({ order, isNew }) => {
-  const [expanded, setExpanded] = useState(false);
-  const meta    = getStatusMeta(order.order_status);
+  const [expanded,      setExpanded]      = useState(false);
+  const [currentStatus, setCurrentStatus] = useState(order.order_status);
+  const [modal,         setModal]         = useState(null); // 'cancel' | 'return' | null
+  const meta    = getStatusMeta(currentStatus);
   const items   = order.order_items || [];
   const total   = items.reduce((s, i) => s + (i.price ?? 0) * (i.quantity ?? 1), 0);
   const date    = order.order_purchase_timestamp
@@ -174,9 +342,39 @@ const OrderCard = ({ order, isNew }) => {
 
       {/* Timeline Section */}
       <div className="px-4 pt-3 pb-1">
-        <StatusTimeline status={order.order_status} />
-        <DeliveryInfo order={order} />
+        <StatusTimeline status={currentStatus} />
+        <DeliveryInfo order={{ ...order, order_status: currentStatus }} />
       </div>
+
+      {/* Action Buttons */}
+      {(currentStatus === 'processing' || currentStatus === 'delivered') && (
+        <div className="px-4 pb-3 d-flex gap-2">
+          {currentStatus === 'processing' && (
+            <button
+              className="btn btn-sm d-flex align-items-center gap-2 fw-medium"
+              style={{
+                backgroundColor: '#fff1f2', color: '#ef4444',
+                border: '1.5px solid #fca5a5', borderRadius: 8, fontSize: 13,
+              }}
+              onClick={() => setModal('cancel')}
+            >
+              <Ban size={14} /> Siparişi İptal Et
+            </button>
+          )}
+          {currentStatus === 'delivered' && (
+            <button
+              className="btn btn-sm d-flex align-items-center gap-2 fw-medium"
+              style={{
+                backgroundColor: '#f5f3ff', color: '#7c3aed',
+                border: '1.5px solid #c4b5fd', borderRadius: 8, fontSize: 13,
+              }}
+              onClick={() => setModal('return')}
+            >
+              <RotateCcw size={14} /> İade Talep Et
+            </button>
+          )}
+        </div>
+      )}
 
       {/* Expanded Details */}
       {expanded && items.length > 0 && (
@@ -200,6 +398,19 @@ const OrderCard = ({ order, isNew }) => {
         </div>
       )}
     </div>
+
+    {/* Reason Modal */}
+    {modal && (
+      <ReasonModal
+        type={modal}
+        orderId={order.order_id}
+        onSuccess={(newStatus) => {
+          setCurrentStatus(newStatus);
+          setModal(null);
+        }}
+        onClose={() => setModal(null)}
+      />
+    )}
   );
 };
 

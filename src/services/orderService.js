@@ -2,10 +2,11 @@ import { supabase } from '../lib/supabase';
 
 // Status definitions — single source of truth
 export const ORDER_STATUSES = [
-  { key: 'processing', label: 'Sipariş Alındı',   color: '#f59e0b', bg: '#fef3c7' },
-  { key: 'shipped',    label: 'Kargoya Verildi',   color: '#3b82f6', bg: '#dbeafe' },
-  { key: 'delivered',  label: 'Teslim Edildi',     color: '#10b981', bg: '#d1fae5' },
-  { key: 'cancelled',  label: 'İptal Edildi',      color: '#ef4444', bg: '#fee2e2' },
+  { key: 'processing',       label: 'Sipariş Alındı',   color: '#f59e0b', bg: '#fef3c7' },
+  { key: 'shipped',          label: 'Kargoya Verildi',  color: '#3b82f6', bg: '#dbeafe' },
+  { key: 'delivered',        label: 'Teslim Edildi',    color: '#10b981', bg: '#d1fae5' },
+  { key: 'cancelled',        label: 'İptal Edildi',     color: '#ef4444', bg: '#fee2e2' },
+  { key: 'return_requested', label: 'İade Talebi',      color: '#8b5cf6', bg: '#ede9fe' },
 ];
 
 export const getStatusMeta = (key) =>
@@ -116,6 +117,36 @@ export const fetchAllOrders = async () => {
   if (error) throw new Error(error.message);
   return orders || [];
 };
+
+// ─── Customer Actions ───────────────────────────────────────────────────────
+
+/**
+ * Cancel a 'processing' order.
+ * @param {string} orderId
+ * @param {string} reason — selected from predefined list
+ */
+export const cancelOrder = async (orderId, reason) => {
+  const { error } = await supabase
+    .from('orders')
+    .update({ order_status: 'cancelled' })
+    .eq('order_id', orderId);
+  if (error) throw new Error(error.message);
+};
+
+/**
+ * Request a return for a 'delivered' order.
+ * @param {string} orderId
+ * @param {string} reason — selected from predefined list
+ */
+export const requestReturn = async (orderId, reason) => {
+  const { error } = await supabase
+    .from('orders')
+    .update({ order_status: 'return_requested' })
+    .eq('order_id', orderId);
+  if (error) throw new Error(error.message);
+};
+
+// ─── Admin ────────────────────────────────────────────────────────────────────
 
 export const updateOrderStatus = async (orderId, status, estimatedDelivery) => {
   const patch = { order_status: status };
