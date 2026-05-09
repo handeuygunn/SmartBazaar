@@ -194,3 +194,10 @@ export const deleteProduct = async (id) => {
 export const sendChatMessage = async () => {
   return { text: 'Chatbot logic is handled in Chatbot.jsx via our Python Flask API.' };
 };
+
+export const fetchProductsByIds = async (ids) => {
+  if (!ids || ids.length === 0) return [];
+  const data = await fetchFromProxy('products');
+  const matched = data.filter(p => ids.includes(p.product_id));
+  return matched.map(transformProduct);
+};

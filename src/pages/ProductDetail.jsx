@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, ArrowLeft } from 'lucide-react';
+import { ShoppingCart, Star, ShieldCheck, Truck, ArrowLeft, Heart } from 'lucide-react';
 import { fetchProductById } from '../services/api';
 import { CartContext } from '../context/CartContext';
+import { useAuth } from '../hooks/useAuth';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -10,6 +11,18 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useContext(CartContext);
+  const { user, toggleFavorite } = useAuth();
+
+  const isFavorite = user?.user_metadata?.favorites?.includes(id);
+
+  const handleToggleFavorite = (e) => {
+    e.preventDefault();
+    if (!user) {
+      alert("Please login to save favorites.");
+      return;
+    }
+    toggleFavorite(id);
+  };
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -62,7 +75,17 @@ const ProductDetail = () => {
               <span className="text-muted small fw-medium">{product.brand}</span>
             </div>
             
-            <h2 className="fw-bold mb-3">{product.title}</h2>
+            <div className="d-flex justify-content-between align-items-start">
+              <h2 className="fw-bold mb-3">{product.title}</h2>
+              <button 
+                className="btn btn-light rounded-circle shadow-sm p-2 d-flex align-items-center justify-content-center"
+                style={{ width: '40px', height: '40px', border: 'none' }}
+                onClick={handleToggleFavorite}
+                aria-label={isFavorite ? "Remove from favorites" : "Add to favorites"}
+              >
+                <Heart size={20} className={isFavorite ? "text-danger" : "text-secondary"} fill={isFavorite ? "currentColor" : "none"} />
+              </button>
+            </div>
             
             <div className="d-flex align-items-center mb-4 gap-3">
               <div className="d-flex align-items-center">

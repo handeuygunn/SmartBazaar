@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
-import { User as UserIcon, Package, Settings, LogOut, Trash2 } from 'lucide-react';
+import { User as UserIcon, Package, Settings, LogOut, Trash2, Heart } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import { fetchUserOrders } from '../services/orderService';
+import { fetchProductsByIds } from '../services/api';
+import ProductCard from '../components/ProductCard';
 
 const statusBadge = (status) => {
   const map = {
@@ -27,6 +29,9 @@ const Profile = () => {
   const [orders, setOrders] = useState([]);
   const [ordersLoading, setOrdersLoading] = useState(false);
   const [ordersError, setOrdersError] = useState('');
+  const [favoritesData, setFavoritesData] = useState([]);
+  const [favoritesLoading, setFavoritesLoading] = useState(false);
+  const [favoritesError, setFavoritesError] = useState('');
 
   useEffect(() => {
     if (activeTab === 'orders' && user) {
@@ -38,6 +43,22 @@ const Profile = () => {
         .finally(() => setOrdersLoading(false));
     }
   }, [activeTab, user]);
+
+  useEffect(() => {
+    if (activeTab === 'favorites' && user) {
+      const favoriteIds = user.user_metadata?.favorites || [];
+      if (favoriteIds.length === 0) {
+        setFavoritesData([]);
+        return;
+      }
+      setFavoritesLoading(true);
+      setFavoritesError('');
+      fetchProductsByIds(favoriteIds)
+        .then(setFavoritesData)
+        .catch(err => setFavoritesError(err.message))
+        .finally(() => setFavoritesLoading(false));
+    }
+  }, [activeTab, user, user?.user_metadata?.favorites]);
 
   if (!user) {
     return <Navigate to="/login" />;
@@ -93,6 +114,12 @@ const Profile = () => {
                 onClick={() => setActiveTab('orders')}
               >
                 <Package size={18} /> Order History
+              </button>
+              <button
+                className={`list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 ${activeTab === 'favorites' ? 'active bg-primary text-white' : ''}`}
+                onClick={() => setActiveTab('favorites')}
+              >
+                <Heart size={18} /> Favorites
               </button>
               <button
                 className="list-group-item list-group-item-action d-flex align-items-center gap-3 py-3 border-0 text-danger"
@@ -216,6 +243,39 @@ const Profile = () => {
                           })}
                         </tbody>
                       </table>
+                    </div>
+                  )}
+                </>
+              )}
+
+              {activeTab === 'favorites' && (
+                <>
+                  <h4 className="fw-bold mb-4">Favorites</h4>
+
+                  {favoritesLoading && (
+                    <div className="text-center py-5">
+                      <div className="spinner-border text-primary" />
+                    </div>
+                  )}
+
+                  {favoritesError && (
+                    <div className="alert alert-danger">{favoritesError}</div>
+                  )}
+
+                  {!favoritesLoading && !favoritesError && favoritesData.length === 0 && (
+                    <div className="text-center py-5 text-muted">
+                      <Heart size={48} className="mb-3 opacity-50" />
+                      <p>You haven't added any products to your favorites yet.</p>
+                    </div>
+                  )}
+
+                  {!favoritesLoading && favoritesData.length > 0 && (
+                    <div className="row g-4">
+                      {favoritesData.map(product => (
+                        <div className="col-md-6 col-xl-4" key={product.id}>
+                          <ProductCard product={product} />
+                        </div>
+                      ))}
                     </div>
                   )}
                 </>

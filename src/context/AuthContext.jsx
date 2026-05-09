@@ -61,8 +61,24 @@ export const AuthProvider = ({ children }) => {
     if (data?.user) setUser(data.user);
   };
 
+  const toggleFavorite = async (productId) => {
+    if (!user) return;
+    const currentFavorites = user.user_metadata?.favorites || [];
+    let newFavorites;
+    if (currentFavorites.includes(productId)) {
+      newFavorites = currentFavorites.filter(id => id !== productId);
+    } else {
+      newFavorites = [...currentFavorites, productId];
+    }
+    const { data, error } = await supabase.auth.updateUser({
+      data: { favorites: newFavorites }
+    });
+    if (error) throw new Error(error.message);
+    if (data?.user) setUser(data.user);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout, register, resetPassword, updatePassword, updateProfile }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, register, resetPassword, updatePassword, updateProfile, toggleFavorite }}>
       {children}
     </AuthContext.Provider>
   );
