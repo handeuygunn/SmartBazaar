@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useContext } from 'react';
-import { useParams, Link } from 'react-router-dom';
-import { ShoppingCart, Star, ShieldCheck, Truck, ArrowLeft } from 'lucide-react';
+import { useParams, Link, useNavigate } from 'react-router-dom';
+import { ShoppingCart, Star, ShieldCheck, Truck, ArrowLeft, Heart } from 'lucide-react';
 import { fetchProductById } from '../services/api';
 import { CartContext } from '../context/CartContext';
+import { useAuth } from '../hooks/useAuth';
 
 const ProductDetail = () => {
   const { id } = useParams();
@@ -10,6 +11,22 @@ const ProductDetail = () => {
   const [loading, setLoading] = useState(true);
   const [quantity, setQuantity] = useState(1);
   const { addToCart } = useContext(CartContext);
+  const { user, toggleFavorite } = useAuth();
+  const navigate = useNavigate();
+
+  const isFavorite = user?.user_metadata?.favorites?.includes(id);
+
+  const handleToggleFavorite = async () => {
+    if (!user) {
+      navigate('/login');
+      return;
+    }
+    try {
+      await toggleFavorite(id);
+    } catch (err) {
+      console.error("Failed to toggle favorite", err);
+    }
+  };
 
   useEffect(() => {
     const loadProduct = async () => {
@@ -98,6 +115,14 @@ const ProductDetail = () => {
                 onClick={() => addToCart(product, quantity)}
               >
                 <ShoppingCart size={20} /> Add to Cart
+              </button>
+
+              <button
+                className="btn btn-outline-secondary py-2 d-flex align-items-center justify-content-center px-4"
+                onClick={handleToggleFavorite}
+                aria-label="Toggle Favorite"
+              >
+                <Heart size={20} className={isFavorite ? "text-danger" : ""} style={isFavorite ? {fill: "currentColor"} : {}} />
               </button>
             </div>
             
