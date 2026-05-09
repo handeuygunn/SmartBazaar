@@ -720,6 +720,53 @@ def forecast_sales():
         return jsonify({"error": str(e)}), 500
 
 
+import sqlite3
+import os
+
+REVIEWS_DB_PATH = os.path.join(os.path.dirname(__file__), 'reviews.db')
+
+@app.route('/api/products/<product_id>/reviews', methods=['GET'])
+def get_product_reviews(product_id):
+    try:
+        conn = sqlite3.connect(REVIEWS_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute('SELECT * FROM product_reviews WHERE product_id = ? ORDER BY created_at DESC', (product_id,))
+        reviews = [dict(row) for row in c.fetchall()]
+        conn.close()
+        return jsonify(reviews), 200
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+@app.route('/api/products/<product_id>/reviews', methods=['POST'])
+def add_product_review(product_id):
+    try:
+        # Since this is an MVP we trust the payload. In a real app, verify user token.
+        data = request.json
+        user_id = data.get('user_id', 'anonymous')
+        user_name = data.get('user_name', 'Anonymous')
+        rating = data.get('rating', 5)
+        comment = data.get('comment', '')
+        verified_purchase = data.get('verified_purchase', False)
+        
+        conn = sqlite3.connect(REVIEWS_DB_PATH)
+        conn.row_factory = sqlite3.Row
+        c = conn.cursor()
+        c.execute('''
+            INSERT INTO product_reviews (product_id, user_id, user_name, rating, comment, verified_purchase)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (product_id, user_id, user_name, rating, comment, verified_purchase))
+        conn.commit()
+        
+        new_id = c.lastrowid
+        c.execute('SELECT * FROM product_reviews WHERE id = ?', (new_id,))
+        new_review = dict(c.fetchone())
+        conn.close()
+        
+        return jsonify(new_review), 201
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
 if __name__ == '__main__':
     app.run(port=5001)
 

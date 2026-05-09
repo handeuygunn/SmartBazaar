@@ -201,3 +201,25 @@ export const fetchProductsByIds = async (ids) => {
   let results = data.filter(p => ids.includes(p.product_id));
   return results.map(transformProduct);
 };
+
+export const fetchProductReviews = async (productId) => {
+  const res = await fetch(`${FLASK_URL}/api/products/${productId}/reviews`);
+  if (!res.ok) {
+    console.warn('Reviews API unavailable, returning empty');
+    return [];
+  }
+  return res.json();
+};
+
+export const createProductReview = async (productId, reviewData) => {
+  const res = await fetch(`${FLASK_URL}/api/products/${productId}/reviews`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(reviewData)
+  });
+  if (!res.ok) {
+    const e = await res.json().catch(() => ({}));
+    throw new Error(e.error || 'Failed to submit review');
+  }
+  return res.json();
+};
