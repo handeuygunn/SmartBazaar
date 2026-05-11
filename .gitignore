@@ -33,3 +33,4 @@ __pycache__
 # Data
 ml-service/data/
 Chatbot/data/
+*.db
