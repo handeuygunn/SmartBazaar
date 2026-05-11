@@ -403,6 +403,13 @@ FAQ_INTENTS = {
             "🔒 **Güvenlik:** Tüm işlemler **256-bit SSL** şifreleme ve **3D Secure** ile korunmaktadır. Kart bilgileriniz sistemimizde saklanmaz.\n\n"
             "💰 **Taksit:** Anlaşmalı bankalarda 3, 6 ve 12 taksit imkânı mevcuttur. Taksit seçeneklerini ödeme adımında görebilirsiniz."
         )
+    },
+    "order_status": {
+        "keywords": [
+            "sipariş durumu", "siparişim nerede", "siparişimi sorgula", 
+            "order status", "siparişim", "sipariş", "kargom nerede"
+        ],
+        "answer": "" # Handled dynamically
     }
 }
 
@@ -511,7 +518,47 @@ def faq_chat():
     if intent == "greeting":
         return jsonify({"response": GREETING_ANSWER, "intent": "greeting"}), 200
 
-    # 2. Known FAQ intent → return pre-built structured answer
+    # 2. Check for order_status intent
+    if intent == "order_status":
+        order_id = data.get("order_id")
+        import re
+        if not order_id:
+            # Try to extract 32-char hex (Olist dataset) or standard UUID
+            match = re.search(r'\b[0-9a-f]{32}\b', user_message, re.I)
+            if not match:
+                match = re.search(r'[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}', user_message, re.I)
+            if match:
+                order_id = match.group(0)
+
+        if not order_id:
+            return jsonify({
+                "response": "Siparişinizin durumunu kontrol edebilmem için lütfen sipariş numaranızı (Order ID) paylaşır mısınız?",
+                "intent": "order_status"
+            }), 200
+        else:
+            url = f"{SUPABASE_URL}/rest/v1/orders?order_id=eq.{order_id}&select=order_status,order_estimated_delivery_date"
+            headers = {"apikey": SUPABASE_KEY, "Authorization": f"Bearer {SUPABASE_KEY}"}
+            try:
+                import requests
+                resp = requests.get(url, headers=headers)
+                if resp.ok and len(resp.json()) > 0:
+                    order = resp.json()[0]
+                    status = order.get('order_status', 'Bilinmiyor')
+                    est_date = order.get('order_estimated_delivery_date', 'Bilinmiyor')
+                    if est_date and est_date != 'Bilinmiyor':
+                        est_date = est_date.split('T')[0]
+                    
+                    answer = f"📦 Sipariş Numaranız: {order_id}\n\nDurum: **{status.upper()}**\nTahmini Teslimat: **{est_date}**"
+                    return jsonify({"response": answer, "intent": "order_status"}), 200
+                else:
+                    return jsonify({
+                        "response": f"Sistemimizde `{order_id}` numaralı bir sipariş bulamadım. Lütfen sipariş numaranızı kontrol edip tekrar deneyin.",
+                        "intent": "order_status"
+                    }), 200
+            except Exception as e:
+                return jsonify({"error": str(e)}), 500
+
+    # 3. Known FAQ intent → return pre-built structured answer
     if intent and intent in FAQ_INTENTS:
         base_answer = FAQ_INTENTS[intent]["answer"]
 
