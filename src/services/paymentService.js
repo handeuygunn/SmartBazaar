@@ -1,6 +1,7 @@
+import { supabase } from '../lib/supabase';
+
 /**
  * Secure Payment Service (Simulated)
- * In a real production app, this would use Stripe, PayPal SDK, or another payment provider.
  */
 
 export const processPayment = async (paymentData) => {
@@ -9,24 +10,36 @@ export const processPayment = async (paymentData) => {
   // Simulate API latency
   await new Promise(resolve => setTimeout(resolve, 2000));
   
-  // Basic validation
-  if (!paymentData.method) {
-    throw new Error('Payment method is required.');
-  }
+  const status = Math.random() > 0.1 ? 'success' : 'failed'; // 10% failure rate for demo
   
-  if (!paymentData.amount || paymentData.amount <= 0) {
-    throw new Error('Invalid payment amount.');
+  // Log transaction to database
+  try {
+    await supabase.from('transactions').insert({
+      user_id: paymentData.userId,
+      amount: paymentData.amount,
+      status: status,
+      payment_method: paymentData.method,
+      details: {
+        browser: navigator.userAgent,
+        ip: '192.168.1.1', // Mock IP
+        ...paymentData
+      }
+    });
+  } catch (err) {
+    console.error('Failed to log transaction:', err);
   }
 
-  // Simulate a successful response from a payment gateway
-  const mockApiResponse = {
+  if (status === 'failed') {
+    throw new Error('Payment failed. Please check your credentials or try a different method.');
+  }
+
+  // Simulate a successful response
+  return {
     success: true,
     transactionId: `txn_${Math.random().toString(36).substr(2, 9)}`,
     timestamp: new Date().toISOString(),
     message: 'Payment processed successfully'
   };
-
-  return mockApiResponse;
 };
 
 export const PAYMENT_METHODS = [

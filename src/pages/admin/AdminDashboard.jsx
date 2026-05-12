@@ -14,6 +14,7 @@ import {
   RefreshCw,
   TrendingUp,
   BarChart3,
+  Activity,
 } from "lucide-react";
 import {
   LineChart,
@@ -41,6 +42,7 @@ import {
 } from "../../services/orderService";
 import { useAuth } from "../../hooks/useAuth";
 import ReportingDashboard from "../../components/admin/ReportingDashboard";
+import TransactionMonitoring from "../../components/admin/TransactionMonitoring";
 
 // ─── Order Status Updater Row ─────────────────────────────────────────────────
 
@@ -496,6 +498,14 @@ const AdminDashboard = () => {
             <BarChart3 size={15} /> Raporlama
           </button>
         </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link fw-medium d-flex align-items-center gap-2 ${activeTab === "transactions" ? "active" : ""}`}
+            onClick={() => setActiveTab("transactions")}
+          >
+            <Activity size={15} /> İşlem Takibi
+          </button>
+        </li>
       </ul>
 
       {/* ── Products Tab ── */}
@@ -766,6 +776,8 @@ const AdminDashboard = () => {
       )}
       {/* ── Reporting Tab ── */}
       {activeTab === "reporting" && <ReportingDashboard />}
+      {/* ── Transactions Tab ── */}
+      {activeTab === "transactions" && <TransactionMonitoring />}
       {/* ── Add Product Modal ── */}
       {showAddModal && (
         <div
