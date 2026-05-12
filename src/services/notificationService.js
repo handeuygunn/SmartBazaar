@@ -1,12 +1,27 @@
+import { supabase } from '../lib/supabase';
+
 /**
  * Secure Notification Service (Simulated)
  */
 
-export const sendNotification = async ({ type, recipient, message, trackingLink }) => {
+export const sendNotification = async ({ type, recipient, message, trackingLink, userId, title }) => {
   console.log(`[SIMULATION] Sending ${type} to ${recipient}...`);
   console.log(`Message: ${message}`);
-  if (trackingLink) {
-    console.log(`Tracking Link: ${trackingLink}`);
+  
+  // Save to database for user to see in their "Notification Center"
+  if (userId) {
+    try {
+      await supabase.from('user_notifications').insert({
+        user_id: userId,
+        type: type,
+        title: title || 'Sipariş Güncellemesi',
+        message: message,
+        tracking_link: trackingLink,
+        is_read: false
+      });
+    } catch (err) {
+      console.error('Failed to save notification to DB:', err);
+    }
   }
   
   // Simulate API latency
@@ -20,27 +35,32 @@ export const sendNotification = async ({ type, recipient, message, trackingLink 
 };
 
 export const triggerOrderShippedNotification = async (order, userMetadata) => {
-  const { emailOptIn, phoneOptIn } = userMetadata || {};
+  const { emailOptIn, phoneOptIn, id: userId, email, phone } = userMetadata || {};
   const trackingLink = `https://smartbazaar.com/track/${order.order_id}`;
-  const message = `Great news! Your order #${order.order_id.slice(0, 8)} has been shipped. Track it here: ${trackingLink}`;
+  const title = 'Siparişiniz Yola Çıktı! 🚚';
+  const message = `Harika haber! #${order.order_id.slice(0, 8)} numaralı siparişiniz kargoya verildi.`;
 
   const notifications = [];
 
-  if (emailOptIn !== false) { // Default to true if not set
+  if (emailOptIn !== false) {
     notifications.push(sendNotification({
       type: 'email',
-      recipient: userMetadata.email,
+      recipient: email,
       message,
-      trackingLink
+      trackingLink,
+      userId,
+      title
     }));
   }
 
-  if (phoneOptIn && userMetadata.phone) {
+  if (phoneOptIn && phone) {
     notifications.push(sendNotification({
       type: 'sms',
-      recipient: userMetadata.phone,
+      recipient: phone,
       message,
-      trackingLink
+      trackingLink,
+      userId,
+      title
     }));
   }
 

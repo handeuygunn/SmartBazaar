@@ -442,8 +442,32 @@ const Profile = () => {
   const [newOrderIds, setNewOrderIds] = useState(new Set()); // flash animation for updated cards
   const unsubscribeRef = useRef(null);
 
-  const [favoriteProducts, setFavoriteProducts] = useState([]);
   const [favoritesLoading, setFavoritesLoading] = useState(false);
+
+  // Notifications state
+  const [notifications, setNotifications] = useState([]);
+  const [notifLoading, setNotifLoading] = useState(false);
+
+  useEffect(() => {
+    if (activeTab !== 'notifications' || !user) return;
+    const loadNotifications = async () => {
+      setNotifLoading(true);
+      try {
+        const { data, error } = await supabase
+          .from('user_notifications')
+          .select('*')
+          .eq('user_id', user.id)
+          .order('created_at', { ascending: false });
+        if (error) throw error;
+        setNotifications(data || []);
+      } catch (err) {
+        console.error("Failed to fetch notifications", err);
+      } finally {
+        setNotifLoading(false);
+      }
+    };
+    loadNotifications();
+  }, [activeTab, user]);
 
   useEffect(() => {
     if (activeTab !== 'favorites' || !user) return;
@@ -573,6 +597,7 @@ const Profile = () => {
                   { key: 'profile', label: 'Hesap Ayarları', Icon: Settings },
                   { key: 'orders', label: 'Siparişlerim', Icon: Package },
                   { key: 'favorites', label: 'Favorilerim', Icon: Heart },
+                  { key: 'notifications', label: 'Bildirimlerim', Icon: Bell },
                 ].map(({ key, label, Icon }) => (
                   <button
                     key={key}
@@ -763,6 +788,57 @@ const Profile = () => {
                         isNew={newOrderIds.has(order.order_id)}
                       />
                     ))}
+                  </>
+                )}
+
+                {/* ── Notifications ── */}
+                {activeTab === 'notifications' && (
+                  <>
+                    <h4 className="fw-bold mb-4">Bildirimlerim</h4>
+                    {notifLoading ? (
+                      <div className="text-center py-5">
+                        <div className="spinner-border text-primary" />
+                        <p className="text-muted mt-3 small">Bildirimler yükleniyor...</p>
+                      </div>
+                    ) : notifications.length === 0 ? (
+                      <div className="text-center py-5 text-muted">
+                        <Bell size={56} className="mb-3 opacity-50" />
+                        <h5>Henüz bildiriminiz yok</h5>
+                        <p className="small">Sipariş durumunuz değiştiğinde burada görünecektir.</p>
+                      </div>
+                    ) : (
+                      <div className="d-flex flex-column gap-3">
+                        {notifications.map(n => (
+                          <div 
+                            key={n.id} 
+                            className={`card border-0 shadow-sm rounded-4 overflow-hidden ${n.is_read ? 'bg-light opacity-75' : ''}`}
+                            style={{ borderLeft: n.is_read ? 'none' : '4px solid #0d6efd' }}
+                          >
+                            <div className="card-body p-4">
+                              <div className="d-flex justify-content-between align-items-start mb-2">
+                                <div className="d-flex align-items-center gap-2">
+                                  {n.type === 'email' ? <Mail size={16} className="text-primary" /> : <MessageSquare size={16} className="text-success" />}
+                                  <h6 className="fw-bold m-0">{n.title}</h6>
+                                </div>
+                                <span className="text-muted small">{new Date(n.created_at).toLocaleString('tr-TR')}</span>
+                              </div>
+                              <p className="mb-3 small">{n.message}</p>
+                              {n.tracking_link && (
+                                <a 
+                                  href={n.tracking_link} 
+                                  target="_blank" 
+                                  rel="noopener noreferrer" 
+                                  className="btn btn-sm btn-primary rounded-pill px-3 fw-bold"
+                                  style={{ fontSize: 12 }}
+                                >
+                                  <Truck size={14} className="me-2" /> Siparişi Takip Et
+                                </a>
+                              )}
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    )}
                   </>
                 )}
 

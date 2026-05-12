@@ -173,11 +173,9 @@ export const updateOrderStatus = async (orderId, status, estimatedDelivery) => {
         .single();
 
       if (orderData) {
-        // In a production app, we would fetch user metadata (opt-in preferences) here.
-        // For this demo simulation, we'll trigger the notification with assumed defaults
-        // if the specific metadata fetch isn't available from client-side auth.
         await triggerOrderShippedNotification({ order_id: orderId }, { 
-          email: 'customer@example.com', // Placeholder
+          id: orderData.user_id,
+          email: 'customer@example.com', // Placeholder or fetch actual user email
           emailOptIn: true, 
           phoneOptIn: true 
         });
