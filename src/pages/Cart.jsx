@@ -1,9 +1,10 @@
 import React, { useContext, useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Trash2, ShoppingBag, ArrowRight, Minus, Plus, Shield, Bookmark } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { Trash2, ShoppingBag, ArrowRight, Minus, Plus, Shield, Bookmark, CreditCard, Wallet, Apple } from 'lucide-react';
 import { CartContext } from '../context/CartContext';
 import { useAuth } from '../hooks/useAuth';
 import { createOrder } from '../services/orderService';
+import { processPayment, PAYMENT_METHODS } from '../services/paymentService';
 
 const Cart = () => {
   const { 
@@ -11,9 +12,12 @@ const Cart = () => {
     savedItems, saveForLater, moveToCart, removeSavedItem 
   } = useContext(CartContext);
   const { user } = useAuth();
+  const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [success, setSuccess] = useState(false);
+  const [selectedPayment, setSelectedPayment] = useState('credit_card');
+
+  const totalAmount = cartTotal * 1.08;
 
   const handleCheckout = async () => {
     if (!user) {
@@ -25,31 +29,35 @@ const Cart = () => {
     setLoading(true);
 
     try {
-      await createOrder(user.id, cartItems);
-      setSuccess(true);
+      // 1. Process Payment via RESTful API (Simulated)
+      const paymentResponse = await processPayment({
+        method: selectedPayment,
+        amount: totalAmount,
+        userId: user.id
+      });
+
+      if (!paymentResponse.success) {
+        throw new Error('Payment processing failed. Please try again.');
+      }
+
+      // 2. Create Order in Database
+      const orderId = await createOrder(user.id, cartItems);
+      
+      // 3. Clear Cart and Redirect to Confirmation Page
       clearCart();
+      navigate('/order-confirmation', { 
+        state: { 
+          orderId, 
+          amount: totalAmount, 
+          paymentMethod: selectedPayment 
+        } 
+      });
     } catch (err) {
-      setError(err.message || 'Sipariş oluşturulamadı. Lütfen tekrar deneyin.');
+      setError(err.message || 'An error occurred during checkout. Please try again.');
     } finally {
       setLoading(false);
     }
   };
-
-  if (success) {
-    return (
-      <div className="container mt-5">
-        <div className="text-center py-5 bg-white rounded-4 shadow-sm animate-fade-in">
-          <div className="bg-success bg-opacity-10 rounded-circle d-inline-flex align-items-center justify-content-center mb-4" style={{ width: '80px', height: '80px' }}>
-            <Shield size={36} className="text-success" />
-          </div>
-          <h3 className="fw-bold mb-2">Sipariş Alındı!</h3>
-          <p className="text-muted mb-4">Siparişiniz başarıyla oluşturuldu. Profil sayfanızdan takip edebilirsiniz.</p>
-          <Link to="/" className="btn btn-primary px-4 fw-medium me-2">Alışverişe Devam Et</Link>
-          <Link to="/profile" className="btn btn-outline-primary px-4 fw-medium">Siparişlerim</Link>
-        </div>
-      </div>
-    );
-  }
 
   if (cartItems.length === 0 && savedItems.length === 0) {
     return (
@@ -212,7 +220,38 @@ const Cart = () => {
 
                 <div className="d-flex justify-content-between mb-4">
                   <span className="fw-bold fs-5">Total</span>
-                  <span className="fw-bold fs-5 text-primary">${(cartTotal * 1.08).toFixed(2)}</span>
+                  <span className="fw-bold fs-5 text-primary">${totalAmount.toFixed(2)}</span>
+                </div>
+
+                <div className="mb-4">
+                  <h6 className="fw-bold mb-3 small text-uppercase text-muted">Select Payment Method</h6>
+                  <div className="d-flex flex-column gap-2">
+                    {PAYMENT_METHODS.map((method) => (
+                      <button
+                        key={method.id}
+                        type="button"
+                        className={`btn d-flex align-items-center justify-content-between p-3 rounded-3 border-2 transition-all ${
+                          selectedPayment === method.id 
+                            ? 'border-primary bg-primary bg-opacity-10 text-primary' 
+                            : 'border-light bg-light text-secondary'
+                        }`}
+                        onClick={() => setSelectedPayment(method.id)}
+                      >
+                        <div className="d-flex align-items-center gap-3">
+                          {method.id === 'apple_pay' && <Apple size={20} />}
+                          {method.id === 'google_pay' && <Wallet size={20} />}
+                          {method.id === 'paypal' && <CreditCard size={20} />}
+                          {method.id === 'credit_card' && <CreditCard size={20} />}
+                          <span className="fw-semibold">{method.name}</span>
+                        </div>
+                        <div className={`rounded-circle border border-2 d-flex align-items-center justify-content-center ${
+                          selectedPayment === method.id ? 'border-primary' : 'border-secondary'
+                        }`} style={{ width: '18px', height: '18px' }}>
+                          {selectedPayment === method.id && <div className="bg-primary rounded-circle" style={{ width: '10px', height: '10px' }} />}
+                        </div>
+                      </button>
+                    ))}
+                  </div>
                 </div>
 
                 <button
@@ -221,8 +260,8 @@ const Cart = () => {
                   disabled={loading}
                 >
                   {loading
-                    ? <><span className="spinner-border spinner-border-sm me-2" />İşleniyor...</>
-                    : <>Proceed to Checkout <ArrowRight size={18} /></>
+                    ? <><span className="spinner-border spinner-border-sm me-2" />Processing...</>
+                    : <>Complete Purchase <ArrowRight size={18} /></>
                   }
                 </button>
 

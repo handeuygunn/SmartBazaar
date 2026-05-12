@@ -9,6 +9,7 @@ import AdminDashboard from './pages/admin/AdminDashboard';
 import ProductDetail from './pages/ProductDetail';
 import ForgotPassword from './pages/ForgotPassword';
 import ResetPassword from './pages/ResetPassword';
+import OrderConfirmation from './pages/OrderConfirmation';
 import Chatbot from './components/Chatbot';
 
 function App() {
@@ -26,6 +27,7 @@ function App() {
           <Route path="/admin" element={<AdminDashboard />} />
           <Route path="/forgot-password" element={<ForgotPassword />} />
           <Route path="/reset-password" element={<ResetPassword />} />
+          <Route path="/order-confirmation" element={<OrderConfirmation />} />
         </Routes>
       </main>
       <footer className="footer mt-auto py-4 bg-light">
