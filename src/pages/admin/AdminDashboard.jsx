@@ -13,6 +13,7 @@ import {
   ChevronDown,
   RefreshCw,
   TrendingUp,
+  BarChart3,
 } from "lucide-react";
 import {
   LineChart,
@@ -39,6 +40,7 @@ import {
   getStatusMeta,
 } from "../../services/orderService";
 import { useAuth } from "../../hooks/useAuth";
+import ReportingDashboard from "../../components/admin/ReportingDashboard";
 
 // ─── Order Status Updater Row ─────────────────────────────────────────────────
 
@@ -486,6 +488,14 @@ const AdminDashboard = () => {
             <TrendingUp size={15} /> Satış Tahmini (ML)
           </button>
         </li>
+        <li className="nav-item">
+          <button
+            className={`nav-link fw-medium d-flex align-items-center gap-2 ${activeTab === "reporting" ? "active" : ""}`}
+            onClick={() => setActiveTab("reporting")}
+          >
+            <BarChart3 size={15} /> Raporlama
+          </button>
+        </li>
       </ul>
 
       {/* ── Products Tab ── */}
@@ -754,7 +764,8 @@ const AdminDashboard = () => {
           </div>
         </div>
       )}
-
+      {/* ── Reporting Tab ── */}
+      {activeTab === "reporting" && <ReportingDashboard />}
       {/* ── Add Product Modal ── */}
       {showAddModal && (
         <div

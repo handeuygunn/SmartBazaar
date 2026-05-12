@@ -161,3 +161,48 @@ export const updateOrderStatus = async (orderId, status, estimatedDelivery) => {
   const { error } = await supabase.from('orders').update(patch).eq('order_id', orderId);
   if (error) throw new Error(error.message);
 };
+
+// ─── Reporting ──────────────────────────────────────────────────────────────
+
+/**
+ * Fetch all order items with order timestamps and product categories.
+ * Used for revenue analysis charts.
+ */
+export const fetchReportingData = async () => {
+  const { data, error } = await supabase
+    .from('order_items')
+    .select(`
+      price,
+      quantity,
+      order_id,
+      product_id,
+      orders (
+        order_purchase_timestamp,
+        order_status
+      )
+    `);
+
+  if (error) throw new Error(error.message);
+
+  // Since we might need category which is in products table, 
+  // we fetch products separately to avoid complex joins that might fail due to FKs
+  const { data: products, error: prodError } = await supabase
+    .from('products')
+    .select('id, category');
+
+  if (prodError) {
+    console.warn('Could not fetch product categories for reporting, using fallback');
+  }
+
+  const productMap = (products || []).reduce((acc, p) => {
+    acc[p.id] = p.category;
+    return acc;
+  }, {});
+
+  return data.map(item => ({
+    ...item,
+    category: productMap[item.product_id] || 'Other',
+    timestamp: item.orders?.order_purchase_timestamp,
+    status: item.orders?.order_status
+  }));
+};
