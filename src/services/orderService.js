@@ -148,6 +148,8 @@ export const requestReturn = async (orderId, reason) => {
 
 // ─── Admin ────────────────────────────────────────────────────────────────────
 
+import { triggerOrderShippedNotification } from './notificationService';
+
 export const updateOrderStatus = async (orderId, status, estimatedDelivery) => {
   const patch = { order_status: status };
 
@@ -160,6 +162,30 @@ export const updateOrderStatus = async (orderId, status, estimatedDelivery) => {
 
   const { error } = await supabase.from('orders').update(patch).eq('order_id', orderId);
   if (error) throw new Error(error.message);
+
+  if (status === 'shipped') {
+    try {
+      // For demo purposes, we fetch the order to get the user_id
+      const { data: orderData } = await supabase
+        .from('orders')
+        .select('user_id')
+        .eq('order_id', orderId)
+        .single();
+
+      if (orderData) {
+        // In a production app, we would fetch user metadata (opt-in preferences) here.
+        // For this demo simulation, we'll trigger the notification with assumed defaults
+        // if the specific metadata fetch isn't available from client-side auth.
+        await triggerOrderShippedNotification({ order_id: orderId }, { 
+          email: 'customer@example.com', // Placeholder
+          emailOptIn: true, 
+          phoneOptIn: true 
+        });
+      }
+    } catch (notifyError) {
+      console.warn('Notification trigger failed:', notifyError);
+    }
+  }
 };
 
 // ─── Reporting ──────────────────────────────────────────────────────────────

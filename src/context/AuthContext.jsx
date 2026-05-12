@@ -50,12 +50,20 @@ export const AuthProvider = ({ children }) => {
     if (error) throw new Error(error.message);
   };
 
-  const updateProfile = async ({ name, email, phone }) => {
+  const updateProfile = async ({ name, email, phone, emailOptIn, phoneOptIn }) => {
     const updates = {};
     if (email) updates.email = email;
-    if (name !== undefined || phone !== undefined) {
-      updates.data = { name, phone };
-    }
+    
+    // Merge new metadata with existing to avoid overwriting unrelated fields
+    const currentData = user?.user_metadata || {};
+    updates.data = { 
+      ...currentData,
+      ...(name !== undefined && { name }),
+      ...(phone !== undefined && { phone }),
+      ...(emailOptIn !== undefined && { emailOptIn }),
+      ...(phoneOptIn !== undefined && { phoneOptIn })
+    };
+
     const { data, error } = await supabase.auth.updateUser(updates);
     if (error) throw new Error(error.message);
     if (data?.user) setUser(data.user);

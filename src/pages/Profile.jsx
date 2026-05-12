@@ -3,7 +3,8 @@ import { Navigate } from 'react-router-dom';
 import {
   User as UserIcon, Package, Settings, LogOut, Trash2,
   ShoppingBag, Truck, CheckCircle, XCircle, Clock, Wifi, WifiOff,
-  Ban, RotateCcw, AlertTriangle, Heart
+  Ban, RotateCcw, AlertTriangle, Heart,
+  Mail, MessageSquare, Bell
 } from 'lucide-react';
 import { useAuth } from '../hooks/useAuth';
 import {
@@ -427,6 +428,8 @@ const Profile = () => {
     name: user?.user_metadata?.name || '',
     email: user?.email || '',
     phone: user?.user_metadata?.phone || '',
+    emailOptIn: user?.user_metadata?.emailOptIn !== false,
+    phoneOptIn: user?.user_metadata?.phoneOptIn || false,
   });
   const [message, setMessage] = useState('');
   const [phoneError, setPhoneError] = useState('');
@@ -622,7 +625,57 @@ const Profile = () => {
                           {phoneError && <div className="invalid-feedback">{phoneError}</div>}
                         </div>
                       </div>
-                      <button type="submit" className="btn btn-primary px-4 fw-medium">
+
+                      <div className="mb-5">
+                        <h6 className="fw-bold d-flex align-items-center gap-2 mb-3">
+                          <Bell size={18} className="text-primary" /> Bildirim Tercihleri
+                        </h6>
+                        <div className="card border-0 bg-light p-3 rounded-4">
+                          <div className="d-flex align-items-center justify-content-between mb-3">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="bg-white p-2 rounded-3 shadow-sm">
+                                <Mail size={18} className="text-primary" />
+                              </div>
+                              <div>
+                                <div className="fw-bold small">E-posta Bildirimleri</div>
+                                <div className="text-muted small">Sipariş durumunuz değiştiğinde e-posta alırsınız.</div>
+                              </div>
+                            </div>
+                            <div className="form-check form-switch">
+                              <input 
+                                className="form-check-input" 
+                                type="checkbox" 
+                                checked={formData.emailOptIn}
+                                onChange={e => setFormData({ ...formData, emailOptIn: e.target.checked })}
+                                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+                              />
+                            </div>
+                          </div>
+
+                          <div className="d-flex align-items-center justify-content-between">
+                            <div className="d-flex align-items-center gap-3">
+                              <div className="bg-white p-2 rounded-3 shadow-sm">
+                                <MessageSquare size={18} className="text-success" />
+                              </div>
+                              <div>
+                                <div className="fw-bold small">SMS Bildirimleri</div>
+                                <div className="text-muted small">Kargo takip bilgileri SMS ile gönderilir.</div>
+                              </div>
+                            </div>
+                            <div className="form-check form-switch">
+                              <input 
+                                className="form-check-input" 
+                                type="checkbox" 
+                                checked={formData.phoneOptIn}
+                                onChange={e => setFormData({ ...formData, phoneOptIn: e.target.checked })}
+                                style={{ width: '40px', height: '20px', cursor: 'pointer' }}
+                              />
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button type="submit" className="btn btn-primary px-5 py-2 fw-bold rounded-pill shadow-sm">
                         Profili Güncelle
                       </button>
                     </form>
